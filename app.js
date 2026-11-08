@@ -321,7 +321,11 @@
       (s.repaid||[]).forEach(r=>{ if(inR(r.date,R)){ if(r.method==='kaspi') k+=r.amount; else ca+=r.amount; } });
     });
     const exps=state.expenses.filter(e=>inR(e.date,R)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.t||0)-(a.t||0));
-    const ex=exps.reduce((t,e)=>t+e.amount,0), net=margin-ex;
+    const ex=exps.reduce((t,e)=>t+e.amount,0);
+    let wcost=0, stockKg=0, stockCost=0;
+    state.batches.forEach(b=>{ const c=calc(b); if(b.waste&&inR(b.date,R)) wcost+=b.waste*c.cpk; stockKg+=c.left; stockCost+=c.left*c.cpk; });
+    wcost=r2(wcost); stockCost=r2(stockCost);
+    const net=margin-ex-wcost;
     const seg=`<div class="seg wide repseg">${[['today','Сегодня'],['week','Неделя'],['month','Месяц'],['all','Всё время']].map(([v,l])=>`<button data-act="period" data-v="${v}" aria-pressed="${period===v}">${l}</button>`).join('')}</div>`;
     let keys=[];
     if(period==='week'||period==='month'){ let d=new Date(R[0]+'T00:00'); const end=R[1]; while(iso(d)<=end){ keys.push(iso(d)); d.setDate(d.getDate()+1); } }
@@ -338,12 +342,14 @@
     const sups=Object.values(supplierGroups()).filter(p=>p.owed>0).sort((a,b)=>b.owed-a.owed);
     return `${seg}
       <div class="repbig"><div class="l">Заработали чистыми${period==='all'?'':' за период'}</div><div class="v ${net>=0?'pos':'neg'}">${signed(net)}</div>${subfx(net)}</div>
+      ${period==='all'&&stockKg>0?`<div class="callout">Ещё не продано: <b>${kgf(stockKg)}</b> на ${money(stockCost)}. В заработок это не входит. В «Прибыль по всем партиям» эти затраты уже вычтены, поэтому цифры отличаются на эту сумму.</div>`:''}
       <div class="repgrid">
         <div>Продано<b>${kgf(kg)}</b>${boxes?`${nf(boxes)} ящ.`:''}</div>
         <div>Выручка<b>${money(rev)}</b>${n} ${n%10===1&&n%100!==11?'продажа':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?'продажи':'продаж')}</div>
         <div>Наценка с продаж<b class="${margin>=0?'pos':'neg'}">${signed(margin)}</b></div>
         <div>Пришло на Kaspi<b>${money(k)}</b></div>
         <div>Пришло наличными<b>${money(ca)}</b></div>
+        ${wcost?`<div>Порча<b class="neg">−${money(wcost)}</b></div>`:''}
         <div>Общие расходы<b class="${ex?'neg':''}">${ex?'−'+money(ex):money(0)}</b></div>
       </div>
       ${chart}
