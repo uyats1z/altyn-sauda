@@ -749,6 +749,9 @@
     $('syncInfoSub').textContent = $('status').textContent;
     $('syncNow').hidden = !mcp;
   }
+  function syncErrMsg(err){ return {needs_reauth:'Переподключите Google Sheets',server_not_connected:'Подключите Google Sheets',selection_required:'Выберите аккаунт Google Sheets',
+        not_in_manifest:'Доступ к таблице не разрешён',approval_required:'Нужно разрешение, нажмите',blocked_by_policy:'Доступ запрещён политикой',
+        server_unavailable:'Google недоступен, нажмите ещё раз',tool_error:'Таблица отклонила запись'}[err&&err.code]||'Не отправлено, нажмите ещё раз'; }
   function scheduleSync(){ if(!mcp) return; clearTimeout(syncTimer); setSync('busy','Ждёт отправки'); syncTimer=setTimeout(syncSheet,1500); }
   const safeText = s => /^[=+\-@']/.test(s) ? "'"+s : s;
   async function syncSheet(){
@@ -777,9 +780,7 @@
       await mcp.callTool('Google Sheets','update_values',{spreadsheetId:SHEET_ID,range:`'Итоги'!J4:J6`,values:[[R.usd||''],[R.eur||''],[R.date||'']]},{cache:false});
       setSync('ok','Таблица обновлена в '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}));
     }catch(err){
-      const msg={needs_reauth:'Переподключите Google Sheets',server_not_connected:'Подключите Google Sheets',selection_required:'Выберите аккаунт Google Sheets',
-        not_in_manifest:'Доступ к таблице не разрешён',approval_required:'Нужно разрешение, нажмите',blocked_by_policy:'Доступ запрещён политикой',
-        server_unavailable:'Google недоступен, нажмите ещё раз',tool_error:'Таблица отклонила запись'}[err&&err.code]||'Не отправлено, нажмите ещё раз';
+      const msg=syncErrMsg(err); if(err&&err.message&&err.code!=='needs_reauth') $('status').textContent=err.message;
       setSync('err',msg);
     }
     syncing=false; if(syncPending){syncPending=false;syncSheet();}
@@ -918,7 +919,7 @@
     if(Auth.google){
       mcp=GS.mcp; docRef=GS.docRef; setSync('idle','Синхронизировать');
       try{ await cloudLoad(); }
-      catch(e){ $('status').textContent='Данные хранятся в этом браузере'; setSync('err','Переподключите Google Sheets'); }
+      catch(e){ $('status').textContent=(e&&e.code!=='needs_reauth'&&e.message)||'Данные хранятся в этом браузере'; setSync('err',syncErrMsg(e)); }
       return;
     }
     if(!window.claude||!window.claude.use){ $('status').textContent='Данные хранятся в этом браузере'; setSync('idle','Открыть таблицу'); return; }

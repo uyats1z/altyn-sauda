@@ -45,7 +45,10 @@
     const r=await fetch(url,Object.assign({},opt,{headers:Object.assign({Authorization:'Bearer '+t.v,'Content-Type':'application/json'},opt&&opt.headers)}));
     if(r.status===401){ try{ localStorage.removeItem(TK); }catch(e){} throw err('needs_reauth'); }
     if(r.status===404){ sid=null; try{ localStorage.removeItem('gs-sheet:'+(profile()||{}).sub); }catch(e){} throw err('tool_error','not found'); }
-    if(!r.ok) throw err(r.status===403?'blocked_by_policy':'tool_error','http '+r.status);
+    if(!r.ok){
+      let m='http '+r.status; try{ const j=await r.json(); m=(j.error&&(j.error.message||j.error))||m; }catch(e){}
+      throw err(r.status===403?'blocked_by_policy':'tool_error',String(m).slice(0,300));
+    }
     return r.status===204?null:r.json();
   }
 
