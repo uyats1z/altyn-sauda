@@ -52,19 +52,88 @@
     return r.status===204?null:r.json();
   }
 
-  const HEAD={
-    'Партии':['ID','Дата','Фрукт','кг','Цена закупа','Доставка','Прочее','Порча','Вес ящика','Цена в валюте','Валюта','Курс'],
-    'Продажи':['ID','ID партии','Дата','кг','Цена','Оплата','Покупатель','Оплачено Kaspi','Оплачено наличными','Город','Ящики','Доставка','Цена в валюте','Валюта','Курс','Оплатить до'],
-    'Расходы':['ID','Дата','Категория','Сумма','Заметка'],
-    'Поставщики':['Поставщик','Телефон','Фрукт','Дата','Количество','Цена','Сумма','Оплачено','Долг','Оплатить до']
+  /* ===== шаблон таблицы: заголовки, формулы, оформление ===== */
+  const TPL='2';
+  const GREEN={red:0.18,green:0.451,blue:0.2745}, WHITE={red:1,green:1,blue:1}, BLUE={blue:1}, GRAY={red:0.365,green:0.42,blue:0.376};
+  const M='#,##0 "₸"', MD='#,##0 "₸";-#,##0 "₸";"-"', DT='dd.mm.yyyy', USD='"$"#,##0;-"$"#,##0', EUR='"€"#,##0;-"€"#,##0';
+  const H={
+    'Партии':['ID партии','Дата','Фрукт','Закуплено, кг','Цена закупа, ₸/кг','Доставка, ₸','Другие расходы, ₸','Списано, кг','Вес ящика, кг','Цена закупа в валюте (за кг)','Валюта','Курс, ₸',
+      'Вложено всего, ₸','Себестоимость 1 кг, ₸','Продано, кг','Выручка, ₸','Остаток, кг','Прибыль, ₸'],
+    'Продажи':['ID продажи','ID партии','Дата','Продано, кг','Цена, ₸/кг','Оплата','Покупатель','Вернул на Kaspi, ₸','Вернул наличными, ₸','Город','Ящиков','Доставка, ₸','Цена в валюте (за кг)','Валюта','Курс, ₸','Оплатить до',
+      'Фрукт','Сумма, ₸','Себестоимость, ₸','Наценка, ₸','Остаток долга, ₸'],
+    'Расходы':['ID','Дата','На что','Сумма, ₸','Комментарий'],
+    'Поставщики':['Поставщик','Телефон','Партия','Дата','Сколько взяли','По чём','Сумма, ₸','Оплачено, ₸','Долг, ₸','Оплатить до']
   };
+  const AF=(c)=>`=ARRAYFORMULA(IF(LEN(A2:A);${c};))`;
+  const FORM={
+    'Партии':{M:AF('D2:D*E2:E+F2:F+G2:G'),N:AF('IF(D2:D=0;0;M2:M/D2:D)'),O:AF("SUMIF('Продажи'!B2:B;A2:A;'Продажи'!D2:D)"),P:AF("SUMIF('Продажи'!B2:B;A2:A;'Продажи'!R2:R)"),Q:AF('D2:D-O2:O-H2:H'),R:AF("P2:P-M2:M-SUMIF('Продажи'!B2:B;A2:A;'Продажи'!L2:L)")},
+    'Продажи':{Q:AF("IFERROR(VLOOKUP(B2:B;'Партии'!A2:N;3;FALSE);\"\")"),R:AF('D2:D*E2:E'),S:AF("D2:D*IFERROR(VLOOKUP(B2:B;'Партии'!A2:N;14;FALSE);0)"),T:AF('R2:R-S2:S-L2:L'),U:AF('IF(F2:F="Под реализацию";R2:R-H2:H-I2:I;0)')}
+  };
+  const SUMCOL=(sh,key,val)=>`=ARRAYFORMULA(IF(LEN(A12:A);SUMIF('Партии'!C2:C;A12:A;'Партии'!${val}2:${val});))`;
+  const ITOGI=[
+    ['Итоги по всем партиям'],
+    ['Данные заполняет приложение: столбцы A–I на листе «Партии» и A–L на листе «Продажи». Остальное считают формулы.'],
+    ['','','в $','в €','','','','в $'],
+    ['Вложено всего, ₸',"=SUM('Партии'!M2:M)",'=IF($J$4>0;B4/$J$4;"")','=IF($J$5>0;B4/$J$5;"")','','Получено на Kaspi, ₸',"=SUMIF('Продажи'!F2:F;\"Kaspi\";'Продажи'!R2:R)+SUM('Продажи'!H2:H)",'=IF($J$4>0;G4/$J$4;"")'],
+    ['Выручка, ₸',"=SUM('Продажи'!R2:R)",'=IF($J$4>0;B5/$J$4;"")','=IF($J$5>0;B5/$J$5;"")','','Получено наличными, ₸',"=SUMIF('Продажи'!F2:F;\"Наличные\";'Продажи'!R2:R)+SUM('Продажи'!I2:I)",'=IF($J$4>0;G5/$J$4;"")'],
+    ['Прибыль, ₸','=B5-B4-G7-G8','=IF($J$4>0;B6/$J$4;"")','=IF($J$5>0;B6/$J$5;"")','','Должны вам, ₸',"=SUM('Продажи'!U2:U)",'=IF($J$4>0;G6/$J$4;"")'],
+    ['Продано, кг',"=SUM('Продажи'!D2:D)",'','','','Доставка покупателям, ₸',"=SUM('Продажи'!L2:L)",'=IF($J$4>0;G7/$J$4;"")'],
+    ['Остаток, кг',"=SUM('Партии'!Q2:Q)",'','','','Общие расходы, ₸',"=SUM('Расходы'!D2:D)",'=IF($J$4>0;G8/$J$4;"")'],
+    ['Списано, кг',"=SUM('Партии'!H2:H)",'','','','Под реализацию: вы должны, ₸',"=SUM('Поставщики'!I2:I)",'=IF($J$4>0;G9/$J$4;"")'],
+    [],
+    ['Фрукт','Вложено, ₸','Выручка, ₸','Прибыль, ₸','','Покупатель','Долг, ₸'],
+    ["=IFERROR(SORT(UNIQUE(FILTER('Партии'!C2:C;LEN('Партии'!C2:C))));\"\")",SUMCOL(0,0,'M'),SUMCOL(0,0,'P'),SUMCOL(0,0,'R'),'',"=IFERROR(SORT(UNIQUE(FILTER('Продажи'!G2:G;'Продажи'!U2:U>0)));\"\")","=ARRAYFORMULA(IF(LEN(F12:F);SUMIF('Продажи'!G2:G;F12:F;'Продажи'!U2:U);))"]
+  ];
+  const COLS={ // [формат, синий текст]
+    'Партии':[[0,1],[DT,1],[0,1],[0,1],[M,1],[M,1],[M,1],[0,1],[0,1],['#,##0.00',1],[0,1],['#,##0.00 "₸"',1],[M],[M],[0],[MD],[0],[MD]],
+    'Продажи':[[0,1],[0,1],[DT,1],[0,1],[M,1],[0,1],[0,1],[M,1],[M,1],[0,1],[0,1],[M,1],['#,##0.00',1],[0,1],['#,##0.00 "₸"',1],[DT,1],[0],[M],[M],[MD],[MD]],
+    'Расходы':[[0],[DT],[0],[M],[0]],
+    'Поставщики':[[0],[0],[0],[DT],[0],[0],[MD],[MD],[MD],[DT]]
+  };
+  const WID={
+    'Партии':[110,90,150,115,115,115,115,115,100,115,115,115,115,115,115,115,115,115],
+    'Продажи':[110,110,90,110,110,110,150,130,130,110,90,110,115,115,115,105,150,120,120,120,130],
+    'Расходы':[140,140,140,140,220],
+    'Поставщики':[140,140,140,140,170,170,120,120,120,120],
+    'Итоги':[200,140,110,110,30,220,140,100,110,120,120,100]
+  };
+  const colL=n=>String.fromCharCode(65+n);
+  async function applyTemplate(id){
+    const meta=await api(`${B}/${id}?fields=sheets.properties(sheetId,title)`);
+    const sid_={}; meta.sheets.forEach(s=>sid_[s.properties.title]=s.properties.sheetId);
+    const data=[];
+    Object.keys(H).forEach(n=>data.push({range:`'${n}'!A1:${colL(H[n].length-1)}1`,values:[H[n]]}));
+    Object.keys(FORM).forEach(n=>Object.keys(FORM[n]).forEach(c=>data.push({range:`'${n}'!${c}2`,values:[[FORM[n][c]]]})));
+    data.push({range:"'Итоги'!A1:H12",values:ITOGI});
+    data.push({range:"'Итоги'!I3:I6",values:[['Курс валют'],['1 $, ₸'],['1 €, ₸'],['Обновлён']]});
+    await api(`${B}/${id}/values:batchUpdate`,{method:'POST',body:JSON.stringify({valueInputOption:'USER_ENTERED',data})});
+    const rq=[]; const R=(s,r0,r1,c0,c1,cell,fields)=>rq.push({repeatCell:{range:{sheetId:sid_[s],startRowIndex:r0,endRowIndex:r1,startColumnIndex:c0,endColumnIndex:c1},cell:{userEnteredFormat:cell},fields:'userEnteredFormat('+fields+')'}});
+    const HD={backgroundColor:GREEN,textFormat:{bold:true,foregroundColor:WHITE},verticalAlignment:'MIDDLE',wrapStrategy:'WRAP'};
+    Object.keys(COLS).forEach(n=>{
+      R(n,0,1,0,COLS[n].length,HD,'backgroundColor,textFormat,verticalAlignment,wrapStrategy');
+      COLS[n].forEach((c,k)=>{ const f={textFormat:{foregroundColor:c[1]?BLUE:{red:0,green:0,blue:0}}}; if(c[0]) f.numberFormat={type:c[0]===DT?'DATE':'NUMBER',pattern:c[0]};
+        R(n,1,1000,k,k+1,f,'numberFormat,textFormat.foregroundColor'); });
+    });
+    ['Партии','Продажи'].forEach(n=>rq.push({updateDimensionProperties:{range:{sheetId:sid_[n],dimension:'ROWS',startIndex:0,endIndex:1},properties:{pixelSize:42},fields:'pixelSize'}}));
+    Object.keys(WID).forEach(n=>WID[n].forEach((w,k)=>rq.push({updateDimensionProperties:{range:{sheetId:sid_[n],dimension:'COLUMNS',startIndex:k,endIndex:k+1},properties:{pixelSize:w},fields:'pixelSize'}})));
+    const T='Итоги', NF=(p)=>({numberFormat:{type:'NUMBER',pattern:p}});
+    R(T,0,1,0,1,{textFormat:{bold:true,fontSize:14}},'textFormat');
+    R(T,1,2,0,1,{textFormat:{italic:true,foregroundColor:GRAY}},'textFormat');
+    R(T,2,3,2,9,{textFormat:{bold:true,foregroundColor:GRAY}},'textFormat');
+    R(T,3,9,0,1,{textFormat:{bold:true}},'textFormat'); R(T,3,9,5,6,{textFormat:{bold:true}},'textFormat');
+    R(T,3,6,1,2,NF(MD),'numberFormat'); R(T,3,6,2,3,NF(USD),'numberFormat'); R(T,3,6,3,4,NF(EUR),'numberFormat');
+    R(T,3,9,6,7,NF(MD),'numberFormat'); R(T,3,9,7,8,NF(USD),'numberFormat');
+    R(T,3,5,9,10,{numberFormat:{type:'NUMBER',pattern:'#,##0.00 "₸"'},textFormat:{foregroundColor:BLUE}},'numberFormat,textFormat.foregroundColor');
+    R(T,10,11,0,4,HD,'backgroundColor,textFormat'); R(T,10,11,5,7,HD,'backgroundColor,textFormat');
+    R(T,11,1000,1,4,NF(MD),'numberFormat'); R(T,11,1000,6,7,NF(MD),'numberFormat');
+    await api(`${B}/${id}:batchUpdate`,{method:'POST',body:JSON.stringify({requests:rq})});
+    try{ localStorage.setItem('gs-tpl:'+id,TPL); }catch(e){}
+  }
   async function create(){
-    const names=Object.keys(HEAD).concat(['Итоги','_data']);
-    const r=await api(B,{method:'POST',body:JSON.stringify({properties:{title:'Altyn Sauda',locale:'ru_RU'},
+    const names=Object.keys(H).concat(['Итоги','_data']);
+    const r=await api(B,{method:'POST',body:JSON.stringify({properties:{title:'Altyn Sauda',locale:'ru_RU',timeZone:'Asia/Almaty'},
       sheets:names.map(n=>({properties:Object.assign({title:n,gridProperties:{frozenRowCount:n==='_data'||n==='Итоги'?0:1}},n==='_data'?{hidden:true}:{})}))})});
-    const data=Object.keys(HEAD).map(n=>({range:`'${n}'!A1:${String.fromCharCode(64+HEAD[n].length)}1`,values:[HEAD[n]]}));
-    data.push({range:"'Итоги'!I3:J6",values:[['Курсы валют',''],['USD',''],['EUR',''],['Дата курса','']]});
-    await api(`${B}/${r.spreadsheetId}/values:batchUpdate`,{method:'POST',body:JSON.stringify({valueInputOption:'RAW',data})});
+    await applyTemplate(r.spreadsheetId);
     return r.spreadsheetId;
   }
   async function ensure(){
@@ -78,6 +147,7 @@
     }
     if(!sid) sid=await create();
     try{ localStorage.setItem(k,sid); }catch(e){}
+    if(localStorage.getItem('gs-tpl:'+sid)!==TPL){ try{ await applyTemplate(sid); }catch(e){ console.warn('template',e); } }
     return sid;
   }
 
