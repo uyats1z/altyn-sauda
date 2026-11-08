@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Altyn Sauda</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#D9A21B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Altyn Sauda">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="authbox" id="authBox" hidden>
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <span class="fruit f1">🍎</span><span class="fruit f2">🍊</span><span class="fruit f3">🍇</span><span class="fruit f4">🍋</span><span class="fruit f5">🍐</span>
+  <div class="langpick">
+    <button type="button" class="langbtn" id="langBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Language"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg><span id="langCur">Русский</span><i aria-hidden="true">▾</i></button>
+    <ul class="langmenu" id="authLang" role="listbox" hidden></ul>
+  </div>
+  <div class="authwrap">
+    <div class="authhead">
+      <div class="authbrand">Altyn Sauda</div>
+      <p class="authtag" id="authTag">Сауда сөзге бай, шаруа көзге бай</p>
+    </div>
+    <form class="authcard" id="authForm" autocomplete="on">
+      <h1 id="authTitle">Вход</h1>
+      <p class="authsub" id="authSub">Войдите, чтобы продолжить работу</p>
+      <label><span id="authUserL">Имя пользователя</span>
+        <span class="inwrap"><span class="ic">👤</span><input id="authName" name="username" autocomplete="username" autocapitalize="none" placeholder="Например, Алмас" required></span>
+      </label>
+      <label><span id="authPwL">Пароль</span>
+        <span class="inwrap"><span class="ic">🔒</span><input id="authPw" name="password" type="password" placeholder="Минимум 6 символов" required>
+        <button type="button" class="eye" id="authEye" aria-label="Показать пароль">👁</button></span>
+      </label>
+      <label id="authPw2Wrap" hidden><span id="authPw2L">Повторите пароль</span>
+        <span class="inwrap"><span class="ic">🔒</span><input id="authPw2" type="password" autocomplete="new-password" placeholder="Ещё раз пароль"></span>
+      </label>
+      <div class="err" id="authErr" role="alert"></div>
+      <button class="btn primary authgo" id="authGo" type="submit">Войти</button>
+    </form>
+    <p class="authfoot"><span id="authAsk">Нет аккаунта?</span> <button class="linkbtn" id="authSwitch" type="button">Зарегистрируйтесь</button></p>
+  </div>
+</div>
+<div class="app">
+<aside class="side">
+  <div class="top">
+    <div class="brandrow">
+      <div class="bname"><b>Altyn Sauda</b></div>
+      <button class="sync rate" id="rateBtn" title="Курс валют"><span id="rateTxt">Указать курс</span></button>
+      <button class="sync" id="syncBtn" data-s="idle" title="Настройки" aria-label="Настройки: тема, цвет, Google Таблица"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><i></i><span id="syncTxt">Google Таблица</span></button>
+    </div>
+    <div class="lbl">Прибыль по всем партиям</div>
+    <div class="big" id="tProfit">0 ₸</div>
+    <div class="fx" id="tFx"></div>
+    <div class="money">
+      <div>Kaspi<b id="tKaspi">0 ₸</b></div>
+      <div>Наличные<b id="tCash">0 ₸</b><span class="subfx" id="tCashFx"></span></div>
+      <div class="d">Должны вам<b id="tDebt">0 ₸</b></div>
+    </div>
+    <div class="mini">
+      <span>Вложено <b id="tCost">0 ₸</b></span>
+      <span>Выручка <b id="tRev">0 ₸</b></span>
+      <span>На складе <b id="tLeft">0 кг</b></span>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn primary" id="openSale">Продажа / отправка</button>
+    <button class="btn" id="openBatch">Новая партия</button>
+    <button class="btn" id="openMore">Ещё: под реализацию, расход</button>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="batches">Партии</button>
+    <button role="tab" aria-selected="false" data-tab="sales">Продажи</button>
+    <button role="tab" aria-selected="false" data-tab="buyers">Покупатели<span class="count dcount" hidden></span></button>
+    <button role="tab" aria-selected="false" data-tab="report">Отчёт</button>
+  </div>
+</aside>
+
+<main class="content">
+  <h1 class="vtitle" id="vTitle">Партии</h1>
+  <div id="view"></div>
+</main>
+
+<footer class="foot">
+  <span id="status">Загрузка…</span><br><a id="sheetLink" target="_blank" rel="noopener">Открыть Google Таблицу</a>
+  <div class="layoutsw"><span>Вид:</span><div class="seg" id="layoutSeg"><button data-v="auto">Авто</button><button data-v="mobile">Телефон</button><button data-v="desktop">Компьютер</button></div></div>
+</footer>
+</div>
+
+<nav class="bnav" aria-label="Разделы">
+  <button data-tab="batches"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l9-5 9 5v8l-9 5-9-5z M3 8l9 5 9-5 M12 13v8"/></svg>Партии</button>
+  <button data-tab="sales"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6"/></svg>Продажи</button>
+  <button class="plus" id="plusBtn" aria-label="Добавить запись"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14 M5 12h14"/></svg></button>
+  <button data-tab="buyers"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M2 21c0-4 3-6 7-6s7 2 7 6 M17 11a3 3 0 1 0 0-6 M22 21c0-3-2-5-5-5.5"/></svg>Покупатели<span class="count dcount" hidden></span></button>
+  <button data-tab="report"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Отчёт</button>
+</nav>
+
+<dialog id="addDlg">
+  <div class="dlg">
+    <h2>Что записать? <button class="iconbtn" data-close aria-label="Закрыть">✕</button></h2>
+    <button class="btn primary" id="addSale" style="padding:18px">Продажа / отправка</button>
+    <button class="btn" id="addBatch" style="padding:18px">Новая партия</button>
+    <button class="btn" id="addTake" style="padding:18px">Взять под реализацию (у поставщика)</button>
+    <button class="btn" id="addCon" style="padding:18px">Отдать под реализацию (покупателю)</button>
+    <button class="btn" id="addExp" style="padding:18px">Расход (аренда, грузчики…)</button>
+  </div>
+</dialog>
+
+<!-- SALE -->
+<dialog id="saleDlg">
+  <div class="dlg">
+    <h2>Продажа / отправка <button class="iconbtn" data-close aria-label="Закрыть">✕</button></h2>
+    <div class="field">
+      <div class="cap">Из какой партии</div>
+      <div class="chips" id="saleChips"></div>
+    </div>
+    <div class="grid2">
+      <label>Покупатель<input id="sBuyer" list="buyerList" placeholder="Имя" autocomplete="off"></label>
+      <label>Город<input id="sCity" list="cityList" placeholder="Астана, Актау…" autocomplete="off"></label>
+    </div>
+    <datalist id="buyerList"></datalist><datalist id="cityList"></datalist>
+    <div class="field">
+      <div class="cap"><span>Сколько</span><em id="sQtyHint"></em></div>
+      <div class="qty"><input class="huge" id="sQty" type="text" data-num inputmode="decimal" min="0" step="any"><div class="seg" id="sQtyUnit"></div></div>
+    </div>
+    <div class="field">
+      <div class="cap"><span id="sPriceCap">Цена</span><em id="sPriceHint"></em></div>
+      <div class="qty"><input class="huge" id="sPrice" type="text" data-num inputmode="decimal" min="0" step="any"><div class="seg" id="sPriceUnit"></div></div>
+    </div>
+    <div class="field">
+      <div class="cap">Оплата</div>
+      <div class="seg wide" id="sPay"><button data-v="kaspi">Kaspi</button><button data-v="cash">Наличные</button><button data-v="debt">Под реализацию</button></div>
+    </div>
+    <label id="sDueWrap" hidden>Оплатить до<input id="sDue" type="date"></label>
+    <details class="more" id="sMore"><summary>Валюта, доставка, другая дата</summary><div class="inner">
+      <div class="grid2" style="align-items:end">
+        <div class="field"><div class="cap">Цена в валюте</div><div class="seg wide" id="sCur"><button data-v="kzt">₸</button><button data-v="usd">$</button><button data-v="eur">€</button></div></div>
+        <label id="sRateWrap">Курс, ₸<input id="sRate" type="text" data-num inputmode="decimal" min="0" step="any"></label>
+      </div>
+      <label>Доставка покупателю, ₸ (если платите вы)<input id="sShip" type="text" data-num inputmode="decimal" min="0" step="any" placeholder="0"></label>
+      <label>Дата<input id="sDate" type="date"></label>
+    </div></details>
+    <div class="preview">
+      <div>Сумма<b id="pSum">0 ₸</b></div>
+      <div style="text-align:right">Заработок<b id="pMargin">0 ₸</b></div>
+    </div>
+    <div class="err" id="sErr"></div>
+    <button class="btn primary" id="saveSale">Записать</button>
+  </div>
+</dialog>
+
+<!-- BATCH -->
+<dialog id="batchDlg">
+  <div class="dlg">
+    <h2><span id="bTitle">Новая партия</span> <button class="iconbtn" data-close aria-label="Закрыть">✕</button></h2>
+    <label>Фрукт<input id="bName" placeholder="Яблоки, апорт" autocomplete="off"></label>
+    <div class="field">
+      <div class="cap"><span id="bQtyCap">Сколько заехало</span><em id="bQtyHint"></em></div>
+      <div class="qty"><input class="huge" id="bQty" type="text" data-num inputmode="decimal" min="0" step="any"><div class="seg" id="bQtyUnit"><button data-v="t">т</button><button data-v="kg">кг</button><button data-v="box">ящ.</button></div></div>
+    </div>
+    <label>Вес одного ящика, кг<input id="bBox" type="text" data-num inputmode="decimal" min="0" step="any" placeholder="например, 20"></label>
+    <div class="field">
+      <div class="cap"><span id="bPriceCap">Цена закупа</span><em id="bPriceHint"></em></div>
+      <div class="qty"><input class="huge" id="bPrice" type="text" data-num inputmode="decimal" min="0" step="any"><div class="seg cur" id="bCur"><button data-v="kzt">₸</button><button data-v="usd">$</button><button data-v="eur">€</button></div><div class="seg" id="bPriceUnit"><button data-v="kg">за кг</button><button data-v="box">за ящ.</button><button data-v="t">за т</button></div></div>
+      <div class="rateline" id="bRateWrap"><span id="bRateLbl">Курс:</span> <input id="bRate" type="text" data-num inputmode="decimal" min="0" step="any"> ₸</div>
+    </div>
+    <label>Расходы: доставка и прочее, ₸<input id="bDelivery" type="text" data-num inputmode="decimal" min="0" step="any" placeholder="0"></label>
+    <input id="bOther" type="hidden" value="">
+    <div class="field" hidden><div class="cap">Как брали у поставщика</div><div class="seg wide" id="bSupPay"><button data-v="paid">Оплатил сразу</button><button data-v="credit">Под реализацию</button></div></div>
+    <div class="supbox" id="supBox">
+      <label>Поставщик (у кого брали)<input id="bSup" list="supList" placeholder="Имя поставщика" autocomplete="off"></label>
+      <datalist id="supList"></datalist>
+      <label>Оплатить до<input id="bDue" type="date"></label>
+      <div class="supsum" id="supSum"></div>
+    </div>
+    <details class="more" id="bMore"><summary>Другая дата, порча</summary><div class="inner">
+      <label>Дата закупа<input id="bDate" type="date"></label>
+      <label id="bWasteWrap">Порча, списано всего кг<input id="bWaste" type="text" data-num inputmode="decimal" min="0" step="any" placeholder="0"></label>
+    </div></details>
+    <div class="preview">
+      <div>Всего вложено<b id="pCost">0 ₸</b></div>
+      <div style="text-align:right">Себестоимость<b id="pCpk">—</b></div>
+    </div>
+    <div class="err" id="bErr"></div>
+    <button class="btn primary" id="saveBatch">Добавить партию</button>
+    <button class="btn danger" id="delBatch" hidden>Удалить партию</button>
+  </div>
+</dialog>
+
+<!-- PAYMENT -->
+<dialog id="payDlg">
+  <div class="dlg">
+    <h2><span id="payTitle">Оплата</span> <button class="iconbtn" data-close aria-label="Закрыть">✕</button></h2>
+    <div class="preview"><div>Должен сейчас<b id="payOwed" class="neg">0 ₸</b><span class="subfx" id="payOwedFx"></span></div></div>
+    <div class="grid2" style="align-items:end">
+      <div class="field"><div class="cap">В какой валюте</div><div class="seg wide" id="payCur"><button data-v="kzt">₸</button><button data-v="usd">$</button><button data-v="eur">€</button></div></div>
+      <label id="payRateWrap" style="visibility:hidden">Курс, ₸<input id="payRate" type="text" data-num inputmode="decimal" min="0" step="any"></label>
+    </div>
+    <div class="field">
+      <div class="cap"><span id="payAmtCap">Сколько отдал, ₸</span><em id="payHint"></em></div>
+      <input class="huge" id="payAmt" type="text" data-num inputmode="decimal" min="0" step="any">
+    </div>
+    <div class="field">
+      <div class="cap">Как оплатил</div>
+      <div class="seg wide" id="payMethod"><button data-v="kaspi">Kaspi</button><button data-v="cash">Наличные</button></div>
+    </div>
+    <label>Дата<input id="payDate" type="date"></label>
+    <div class="err" id="payErr"></div>
+    <button class="btn primary" id="savePay">Принять оплату</button>
+  </div>
+</dialog>
+
+<dialog id="rateDlg">
+  <div class="dlg">
+    <h2>Курс валют <button class="iconbtn" data-close aria-label="Закрыть">✕</button></h2>
+    <p style="margin:0;color:var(--muted);font-size:.9rem">Вводите курс сами, как в обменнике или банке. Новые партии и продажи в валюте возьмут этот курс, у старых остаётся курс, по которому их записали.</p>
+    <div class="grid2">
+      <label>1 $ = ₸<input class="huge" id="rUsd" type="text" data-num inputmode="decimal" min="0" step="any"></label>
+      <label>1 € = ₸<input class="huge" id="rEur" type="text" data-num inputmode="decimal" min="0" step="any"></label>
+    </div>
+    <div class="err" id="rErr"></div>
+    <button class="btn primary" id="saveRate">Сохранить курс</button>
+  </div>
+</dialog>
+
+<dialog id="syncDlg">
+  <div class="dlg">
+    <h2>Настройки <button class="iconbtn" data-close aria-label="Закрыть">✕</button></h2>
+    <div><div class="sect">Язык</div><div class="chipset" id="langSeg"></div></div>
+    <div><div class="sect">Тема</div><div class="seg wide" id="themeSeg"><button data-v="auto">Авто</button><button data-v="light">Светлая</button><button data-v="dark">Тёмная</button></div></div>
+    <div><div class="sect">Цвет</div><div class="swatches" id="accentSeg">
+      <button class="swatch" data-v="red" style="background:#D24B3E" aria-label="Красный, как логотип"></button>
+      <button class="swatch" data-v="green" style="background:#4E8A2E" aria-label="Зелёный"></button>
+      <button class="swatch" data-v="blue" style="background:#2F78B8" aria-label="Синий"></button>
+      <button class="swatch" data-v="orange" style="background:#D9822B" aria-label="Оранжевый"></button>
+      <button class="swatch" data-v="purple" style="background:#7A5BC7" aria-label="Фиолетовый"></button>
+    </div></div>
+    <div class="divider"></div>
+    <div class="sect" style="margin-bottom:-6px">Google Таблица</div>
+    <div class="syncinfo" id="syncInfo"><i></i><div><b id="syncInfoTxt"></b><span id="syncInfoSub"></span></div></div>
+    <a class="btn primary" id="sheetBtn" target="_blank" rel="noopener">Открыть таблицу</a>
+    <button class="btn" id="syncNow">Отправить данные сейчас</button>
+    <div class="divider"></div>
+    <div class="sect" style="margin-bottom:-6px">Аккаунт</div>
+    <div class="syncinfo"><div><b id="acctName"></b><span>Данные видны только этому пользователю на этом устройстве</span></div></div>
+    <button class="btn" id="logoutBtn">Выйти</button>
+    <div class="divider"></div>
+    <div class="sect" style="margin-bottom:-6px">Резервная копия</div>
+    <button class="btn" id="bkExport">Скачать копию (JSON)</button>
+    <button class="btn" id="bkImport">Загрузить копию</button>
+    <input type="file" id="bkFile" accept="application/json,.json" hidden>
+  </div>
+</dialog>
+
+<dialog id="expDlg">
+  <div class="dlg">
+    <h2>Расход <button class="iconbtn" data-close aria-label="Закрыть">✕</button></h2>
+    <div class="field"><div class="cap">На что</div><div class="chipset" id="expCats"><button data-v="Аренда">Аренда</button><button data-v="Грузчики">Грузчики</button><button data-v="Бензин">Бензин</button><button data-v="Зарплата">Зарплата</button><button data-v="Другое">Другое</button></div></div>
+    <label>Сумма, ₸<input class="huge" id="expAmt" type="text" data-num inputmode="decimal"></label>
+    <label>Комментарий<input id="expNote" placeholder="необязательно" autocomplete="off"></label>
+    <label>Дата<input id="expDate" type="date"></label>
+    <div class="err" id="expErr"></div>
+    <button class="btn primary" id="saveExp">Записать расход</button>
+  </div>
+</dialog>
+
+<dialog id="phoneDlg">
+  <div class="dlg">
+    <h2><span id="phoneTitle">Номер WhatsApp</span> <button class="iconbtn" data-close aria-label="Закрыть">✕</button></h2>
+    <label>Номер телефона<input class="huge" id="phoneIn" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 7__ ___ __ __"></label>
+    <button class="btn" id="phonePick" hidden>Выбрать из контактов</button>
+    <div class="err" id="phoneErr"></div>
+    <button class="btn primary" id="phoneSave">Сохранить</button>
+    <button class="btn danger" id="phoneDel" hidden>Удалить номер</button>
+  </div>
+</dialog>
+
+<dialog id="invDlg">
+  <div class="dlg">
+    <h2>Накладная <button class="iconbtn" data-close aria-label="Закрыть">✕</button></h2>
+    <img class="invimg" id="invImg" alt="Накладная">
+    <a class="btn wa" id="invWa" target="_blank" rel="noopener">Отправить в WhatsApp</a>
+    <button class="btn" id="invSave" hidden>Сохранить картинку</button>
+    <div class="err" id="invErr"></div>
+  </div>
+</dialog>
+
+<dialog id="askDlg">
+  <div class="dlg">
+    <h2 id="askText" style="font-weight:600">Удалить?</h2>
+    <p id="askSub" style="margin:0;color:var(--muted);font-size:.92rem"></p>
+    <div class="grid2"><button class="btn" id="askNo">Отмена</button><button class="btn primary" id="askYes" style="background:var(--loss);border-color:var(--loss);color:#fff">Удалить</button></div>
+  </div>
+</dialog>
+
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script>if("serviceWorker" in navigator&&location.protocol!=="file:")addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
+</body>
+</html>
