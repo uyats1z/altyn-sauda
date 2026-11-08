@@ -148,7 +148,7 @@
     }
     if(!sid) sid=await create();
     try{ localStorage.setItem(k,sid); }catch(e){}
-    if(localStorage.getItem('gs-tpl:'+sid)!==TPL){ try{ await applyTemplate(sid); }catch(e){ console.warn('template',e); } }
+    if(localStorage.getItem('gs-tpl:'+sid)!==TPL){ try{ await applyTemplate(sid); }catch(e){ if(e&&e.code==='needs_reauth') throw e; console.warn('template',e); } }
     return sid;
   }
 
@@ -176,6 +176,7 @@
     throw err('tool_error');
   }};
 
-  window.GS={ enabled:!!CID, profile, hasToken:()=>!!saved(), connect, signIn, signOut, docRef, mcp,
+  async function reapply(){ const id=await ensure(); await applyTemplate(id); }
+  window.GS={ reapply, enabled:!!CID, profile, hasToken:()=>!!saved(), connect, signIn, signOut, docRef, mcp,
     url:()=>sid?'https://docs.google.com/spreadsheets/d/'+sid+'/edit':'' };
 })();
