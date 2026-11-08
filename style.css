@@ -372,3 +372,8 @@ dialog[open]::backdrop{animation:fadeIn .4s ease both}
 
 .gbtn{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--surface)!important;color:var(--ink)!important;border:1px solid var(--line)!important;padding:14px;font-size:1.02rem;box-shadow:0 1px 2px rgba(30,25,20,.08)}
 .gbtn svg{width:20px;height:20px}
+
+/* наличные: строка «в т.ч. $» не должна сдвигать сумму */
+[data-layout="desktop"] .money div{flex-wrap:wrap;column-gap:10px}
+.money .subfx{flex:0 0 100%;text-align:right;font-size:.78rem;line-height:1.2}
+.money .subfx:empty{display:none}
