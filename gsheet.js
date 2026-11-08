@@ -53,7 +53,7 @@
   }
 
   /* ===== шаблон таблицы: заголовки, формулы, оформление ===== */
-  const TPL='4';
+  const TPL='5';
   const GREEN={red:0.18,green:0.451,blue:0.2745}, WHITE={red:1,green:1,blue:1}, BLUE={blue:1}, GRAY={red:0.365,green:0.42,blue:0.376};
   const M='#,##0 "₸"', MD='#,##0 "₸";-#,##0 "₸";"-"', DT='dd.mm.yyyy', USD='"$"#,##0;-"$"#,##0', EUR='"€"#,##0;-"€"#,##0';
   const H={
@@ -69,7 +69,7 @@
     'Партии':{M:AF('D2:D*E2:E+F2:F+G2:G'),N:AF('IF(D2:D=0;0;M2:M/D2:D)'),O:AF("SUMIF('Продажи'!B2:B;A2:A;'Продажи'!D2:D)"),P:AF("SUMIF('Продажи'!B2:B;A2:A;'Продажи'!R2:R)"),Q:AF('D2:D-O2:O-H2:H'),R:AF("P2:P-M2:M-SUMIF('Продажи'!B2:B;A2:A;'Продажи'!L2:L)")},
     'Продажи':{Q:AF("IFERROR(VLOOKUP(B2:B;'Партии'!A2:N;3;FALSE);\"\")"),R:AF('D2:D*E2:E'),S:AF("D2:D*IFERROR(VLOOKUP(B2:B;'Партии'!A2:N;14;FALSE);0)"),T:AF('R2:R-S2:S-L2:L'),U:AF('IF(F2:F="Под реализацию";R2:R-H2:H-I2:I;0)')}
   };
-  const SUMCOL2=(val)=>`=ARRAYFORMULA(IF(LEN(A14:A);SUMIF('Партии'!C2:C;A14:A;'Партии'!${val}2:${val});))`;
+  const SUMCOL2=(val)=>`=ARRAYFORMULA(IF(LEN(A15:A);SUMIF('Партии'!C2:C;A15:A;'Партии'!${val}2:${val});))`;
   const ITOGI=[
     ['Итоги по всем партиям'],
     ['Данные заполняет приложение: столбцы A–I на листе «Партии» и A–L на листе «Продажи». Остальное считают формулы.'],
@@ -82,9 +82,10 @@
     ['Остаток, кг',"=SUM('Партии'!Q2:Q)",'','','','Под реализацию: вы должны, ₸',"=SUM('Поставщики'!I2:I)",'=IF($J$4>0;G9/$J$4;"")'],
     ['Остаток, ящиков',"=IFERROR(SUM(ARRAYFORMULA(IF('Партии'!I2:I>0;'Партии'!Q2:Q/'Партии'!I2:I;0)));0)"],
     ['Списано, кг',"=SUM('Партии'!H2:H)"],
+    ['Списано, ящиков',"=IFERROR(SUM(ARRAYFORMULA(IF('Партии'!I2:I>0;'Партии'!H2:H/'Партии'!I2:I;0)));0)"],
     [],
     ['Фрукт','Вложено, ₸','Выручка, ₸','Прибыль, ₸','','Покупатель','Долг, ₸'],
-    ["=IFERROR(SORT(UNIQUE(FILTER('Партии'!C2:C;LEN('Партии'!C2:C))));\"\")",SUMCOL2('M'),SUMCOL2('P'),SUMCOL2('R'),'',"=IFERROR(SORT(UNIQUE(FILTER('Продажи'!G2:G;'Продажи'!U2:U>0)));\"\")","=ARRAYFORMULA(IF(LEN(F14:F);SUMIF('Продажи'!G2:G;F14:F;'Продажи'!U2:U);))"]
+    ["=IFERROR(SORT(UNIQUE(FILTER('Партии'!C2:C;LEN('Партии'!C2:C))));\"\")",SUMCOL2('M'),SUMCOL2('P'),SUMCOL2('R'),'',"=IFERROR(SORT(UNIQUE(FILTER('Продажи'!G2:G;'Продажи'!U2:U>0)));\"\")","=ARRAYFORMULA(IF(LEN(F15:F);SUMIF('Продажи'!G2:G;F15:F;'Продажи'!U2:U);))"]
   ];
   const COLS={ // [формат, синий текст]
     'Партии':[[0,1],[DT,1],[0,1],[0,1],[M,1],[M,1],[M,1],[0,1],[0,1],['#,##0.00',1],[0,1],['#,##0.00 "₸"',1],[M],[M],[0],[MD],[0],[MD]],
@@ -106,7 +107,7 @@
     const data=[];
     Object.keys(H).forEach(n=>data.push({range:`'${n}'!A1:${colL(H[n].length-1)}1`,values:[H[n]]}));
     Object.keys(FORM).forEach(n=>Object.keys(FORM[n]).forEach(c=>data.push({range:`'${n}'!${c}2`,values:[[FORM[n][c]]]})));
-    data.push({range:"'Итоги'!A1:H14",values:ITOGI});
+    data.push({range:"'Итоги'!A1:H15",values:ITOGI});
     data.push({range:"'Итоги'!I3:I6",values:[['Курс валют'],['1 $, ₸'],['1 €, ₸'],['Обновлён']]});
     await api(`${B}/${id}/values:batchClear`,{method:'POST',body:JSON.stringify({ranges:["'Итоги'!A1:H1000"]})});
     await api(`${B}/${id}/values:batchUpdate`,{method:'POST',body:JSON.stringify({valueInputOption:'USER_ENTERED',data})});
@@ -123,12 +124,12 @@
     R(T,0,1,0,1,{textFormat:{bold:true,fontSize:14}},'textFormat');
     R(T,1,2,0,1,{textFormat:{italic:true,foregroundColor:GRAY}},'textFormat');
     R(T,2,3,2,9,{textFormat:{bold:true,foregroundColor:GRAY}},'textFormat');
-    R(T,3,11,0,1,{textFormat:{bold:true}},'textFormat'); R(T,3,9,5,6,{textFormat:{bold:true}},'textFormat');
+    R(T,3,12,0,1,{textFormat:{bold:true}},'textFormat'); R(T,3,9,5,6,{textFormat:{bold:true}},'textFormat');
     R(T,3,6,1,2,NF(MD),'numberFormat'); R(T,3,6,2,3,NF(USD),'numberFormat'); R(T,3,6,3,4,NF(EUR),'numberFormat');
     R(T,3,9,6,7,NF(MD),'numberFormat'); R(T,3,9,7,8,NF(USD),'numberFormat');
     R(T,3,5,9,10,{numberFormat:{type:'NUMBER',pattern:'#,##0.00 "₸"'},textFormat:{foregroundColor:BLUE}},'numberFormat,textFormat.foregroundColor');
-    R(T,12,13,0,4,HD,'backgroundColor,textFormat'); R(T,12,13,5,7,HD,'backgroundColor,textFormat');
-    R(T,13,1000,1,4,NF(MD),'numberFormat'); R(T,13,1000,6,7,NF(MD),'numberFormat');
+    R(T,13,14,0,4,HD,'backgroundColor,textFormat'); R(T,13,14,5,7,HD,'backgroundColor,textFormat');
+    R(T,14,1000,1,4,NF(MD),'numberFormat'); R(T,14,1000,6,7,NF(MD),'numberFormat');
     await api(`${B}/${id}:batchUpdate`,{method:'POST',body:JSON.stringify({requests:rq})});
     try{ localStorage.setItem('gs-tpl:'+id,TPL); }catch(e){}
   }
