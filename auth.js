@@ -35,13 +35,15 @@
   function start(u){ localStorage.setItem(SESSION,u.id); location.reload(); }
   function logout(){ localStorage.removeItem(SESSION); location.reload(); }
 
-  window.Auth={ user:()=>session(), key:()=>LEGACY+':'+(localStorage.getItem(SESSION)||'anon'), logout };
+  const GP=(window.GS&&GS.enabled)?GS.profile():null;
+  window.Auth={ user:()=>GP||session(), google:GP, key:()=>LEGACY+':'+(GP?'g'+GP.sub:(localStorage.getItem(SESSION)||'anon')),
+    logout:()=>{ if(GP) GS.signOut(); logout(); } };
 
   function boot(){
-    const u=session();
+    const u=GP?{login:GP.email||GP.name}:session();
     if(u){
       const lbl=$('acctName'); if(lbl) lbl.textContent=u.login;
-      const lo=$('logoutBtn'); if(lo) lo.addEventListener('click',()=>{ if(confirm('Выйти из аккаунта?')) logout(); });
+      const lo=$('logoutBtn'); if(lo) lo.addEventListener('click',()=>{ if(confirm('Выйти из аккаунта?')) Auth.logout(); });
       const s=document.createElement('script'); s.src='app.js'; document.body.appendChild(s);
       return;
     }
@@ -72,6 +74,8 @@
       e_bad:{ru:'Неверное имя или пароль.',en:'Wrong name or password.',kk:'Аты немесе құпиясөз қате.',tr:'Ad veya şifre hatalı.',az:'Ad və ya parol yanlışdır.',hy:'Անունը կամ գաղտնաբառը սխալ է:',tg:'Ном ё рамз нодуруст аст.',zh:'用户名或密码错误。'},
       e_crypto:{ru:'Откройте через https или localhost (браузер блокирует шифрование).',en:'Open via https or localhost (the browser blocks encryption).',kk:'https немесе localhost арқылы ашыңыз (браузер шифрлауды бұғаттайды).',tr:'https veya localhost ile açın (tarayıcı şifrelemeyi engelliyor).',az:'https və ya localhost ilə açın (brauzer şifrələməni bloklayır).',hy:'Բացեք https-ով կամ localhost-ով (դիտարկիչը արգելափակում է գաղտնագրումը):',tg:'Тавассути https ё localhost кушоед (браузер рамзгузорӣро манъ мекунад).',zh:'请通过 https 或 localhost 打开（浏览器阻止了加密）。'}
     };
+    const GT={"g_btn": {"ru": "Войти через Google", "en": "Sign in with Google", "kk": "Google арқылы кіру", "ky": "Google аркылуу кирүү", "tr": "Google ile giriş yap", "az": "Google ilə daxil ol", "hy": "Մուտք Google-ով", "tg": "Бо Google ворид шудан", "zh": "使用 Google 登录"}, "g_sub": {"ru": "Данные хранятся в вашей личной Google Таблице", "en": "Your data is stored in your own Google Sheet", "kk": "Деректер өзіңіздің жеке Google Кестеңізде сақталады", "ky": "Маалымат өзүңүздүн жеке Google Таблицаңызда сакталат", "tr": "Verileriniz kendi Google Tablonuzda saklanır", "az": "Məlumatlar şəxsi Google Cədvəlinizdə saxlanılır", "hy": "Տվյալները պահվում են ձեր անձնական Google Աղյուսակում", "tg": "Маълумот дар ҷадвали шахсии Google-и шумо нигоҳ дошта мешавад", "zh": "数据保存在您自己的 Google 表格中"}, "g_err": {"ru": "Не удалось войти через Google. Попробуйте ещё раз.", "en": "Could not sign in with Google. Please try again.", "kk": "Google арқылы кіру мүмкін болмады. Қайталап көріңіз.", "ky": "Google аркылуу кирүү мүмкүн болгон жок. Кайра аракет кылыңыз.", "tr": "Google ile giriş yapılamadı. Tekrar deneyin.", "az": "Google ilə daxil olmaq mümkün olmadı. Yenidən cəhd edin.", "hy": "Չհաջողվեց մուտք գործել Google-ով: Փորձեք կրկին:", "tg": "Ворид бо Google муяссар нашуд. Бори дигар кӯшиш кунед.", "zh": "无法使用 Google 登录，请重试。"}};
+    Object.keys(GT).forEach(k=>{ T[k]=GT[k]; });
     const KY={"title_login": "Кирүү", "sub_login": "Улантуу үчүн кириңиз", "title_reg": "Катталуу", "sub_reg": "Аккаунт түзүңүз — жарым мүнөт эле алат", "user": "Колдонуучу аты", "user_ph": "Атыңыз", "pw": "Сырсөз", "pw_ph": "Эң аз дегенде 6 белги", "pw2": "Сырсөздү кайталаңыз", "pw2_ph": "Сырсөздү дагы бир жолу", "go_login": "Кирүү", "go_reg": "Аккаунт түзүү", "ask_login": "Аккаунтуңуз жокпу?", "sw_login": "Катталыңыз", "ask_reg": "Аккаунтуңуз барбы?", "sw_reg": "Кириңиз", "e_name": "Атыңызды киргизиңиз (эң аз дегенде 2 белги).", "e_pw": "Сырсөз эң аз дегенде 6 белги болушу керек.", "e_match": "Сырсөздөр дал келген жок.", "e_exists": "Мындай колдонуучу бар.", "e_bad": "Аты же сырсөз туура эмес.", "e_crypto": "https же localhost аркылуу ачыңыз (браузер шифрлөөнү бөгөттөйт)."};
     Object.keys(KY).forEach(k=>{ T[k].ky=KY[k]; });
     let lang=localStorage.getItem('sam-lang')||'ru'; if(!LANGS.some(l=>l[0]===lang)) lang='ru';
@@ -101,11 +105,25 @@
       $('authSwitch').textContent=t(L?'sw_login':'sw_reg');
       $('authPw2Wrap').hidden=L;
       $('authPw').autocomplete=L?'current-password':'new-password';
+      const G=!!(window.GS&&GS.enabled);
+      [$('authName'),$('authPw'),$('authPw2')].forEach(i=>{ i.closest('label').hidden=G||(i.id==='authPw2'&&L); });
+      $('authGo').hidden=G; document.querySelector('.authfoot').hidden=G; $('googleBtn').hidden=!G;
+      if(G){ $('googleTxt').textContent=t('g_btn'); $('authTitle').textContent=t('title_login'); $('authSub').textContent=t('g_sub'); }
       showErr(lastErr);
     }
     function repaintMode(){ lastErr=null; paint(); const f=$('authForm'); f.classList.remove('pop'); void f.offsetWidth; f.classList.add('pop'); }
     document.documentElement.lang=lang==='zh'?'zh-CN':lang;
     paint();
+    $('googleBtn').addEventListener('click',async()=>{
+      showErr(null); $('googleBtn').disabled=true;
+      try{
+        const p=await GS.signIn();
+        // данные, созданные при локальном входе, достаются первому Google-пользователю
+        const gk=LEGACY+':g'+p.sub;
+        if(!localStorage.getItem(gk)){ const lk=Object.keys(localStorage).find(k=>k.startsWith(LEGACY+':u')); if(lk) localStorage.setItem(gk,localStorage.getItem(lk)); }
+        location.reload();
+      }catch(ex){ showErr('g_err'); $('googleBtn').disabled=false; }
+    });
     $('authEye').addEventListener('click',()=>{ const p=$('authPw'),sh=p.type==='password'; p.type=sh?'text':'password'; $('authPw2').type=p.type; $('authEye').textContent=sh?'🙈':'👁'; });
     $('authSwitch').addEventListener('click',()=>{ mode=mode==='login'?'register':'login'; repaintMode(); });
     $('authForm').addEventListener('submit',async e=>{

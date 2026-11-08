@@ -730,11 +730,12 @@
   /* ---------- persistence ---------- */
   function changed(){ render(); clearTimeout(saveTimer); saveTimer=setTimeout(save,400); scheduleSync(); }
   async function save(){
-    try{localStorage.setItem(LS_KEY,JSON.stringify(state));}catch(e){}
+    const ts=Date.now();
+    try{localStorage.setItem(LS_KEY,JSON.stringify(state)); localStorage.setItem(LS_KEY+':ts',String(ts));}catch(e){}
     if(!docRef){ $('status').textContent='Данные хранятся в этом браузере'; return; }
     if(saving){savePending=true;return;}
     saving=true;
-    try{ await docRef.set({batches:state.batches,rates:state.rates,expenses:state.expenses,people:state.people}); $('status').textContent='Сохранено в вашем аккаунте'; }
+    try{ await docRef.set({batches:state.batches,rates:state.rates,expenses:state.expenses,people:state.people,_ts:ts}); $('status').textContent='Сохранено в вашем аккаунте'; }
     catch(err){ $('status').textContent='Не удалось сохранить в аккаунт ('+(err&&err.code||'ошибка')+'), копия есть в этом браузере.'; }
     saving=false; if(savePending){savePending=false;save();}
   }
@@ -859,7 +860,26 @@
   $('accentSeg').addEventListener('click',e=>{ const b=e.target.closest('[data-v]'); if(!b) return; look.accent=b.dataset.v; saveLook(); });
   applyLook();
   $('syncBtn').addEventListener('click',()=>{ fillSyncDlg(); $('syncDlg').showModal(); });
-  $('syncNow').addEventListener('click',()=>{ clearTimeout(syncTimer); syncSheet(); fillSyncDlg(); });
+  $('syncNow').addEventListener('click',async()=>{
+    clearTimeout(syncTimer);
+    if(Auth.google&&!GS.hasToken()){
+      try{ await GS.connect(Auth.google.email); await cloudLoad(); }catch(e){ setSync('err','Переподключите Google Sheets'); }
+      fillSyncDlg(); return;
+    }
+    syncSheet(); fillSyncDlg(); });
+  /* Google: подтянуть данные из личной таблицы (новее — выигрывает) */
+  async function cloudLoad(){
+    const snap=await docRef.get(); const d=snap.exists?snap.data():null;
+    const lts=+localStorage.getItem(LS_KEY+':ts')||0;
+    if(d&&Array.isArray(d.batches)&&(d._ts||0)>lts){
+      state={batches:d.batches,rates:d.rates||{usd:0,eur:0,date:''},expenses:d.expenses||[],people:d.people||{}}; migrate();
+      try{ localStorage.setItem(LS_KEY,JSON.stringify(state)); localStorage.setItem(LS_KEY+':ts',String(d._ts)); }catch(e){}
+      render();
+    } else await save();
+    $('status').textContent='Данные сохраняются в вашем аккаунте';
+    const u=GS.url(); if(u){ $('sheetBtn').href=u; $('sheetBtn').hidden=false; }
+    syncSheet();
+  }
 
   /* ---------- backup ---------- */
   $('bkExport').addEventListener('click',()=>{
@@ -895,6 +915,12 @@
   buildTr(); trObs.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:TR_ATTRS});
   loadLocal(); migrate(); applyLayout(); render(); applyLang();
   (async()=>{
+    if(Auth.google){
+      mcp=GS.mcp; docRef=GS.docRef; setSync('idle','Синхронизировать');
+      try{ await cloudLoad(); }
+      catch(e){ $('status').textContent='Данные хранятся в этом браузере'; setSync('err','Переподключите Google Sheets'); }
+      return;
+    }
     if(!window.claude||!window.claude.use){ $('status').textContent='Данные хранятся в этом браузере'; setSync('idle','Открыть таблицу'); return; }
     claude.use('mcp').then(m=>{ mcp=m; setSync('idle', m?'Синхронизировать':'Открыть таблицу'); }).catch(()=>{});
     const timer=setTimeout(()=>{ if(!docRef) $('status').textContent='Данные хранятся в этом браузере'; },10000);
