@@ -371,6 +371,7 @@
 
   /* invoice */
   let invDownloads=null; if(window.claude&&window.claude.use) claude.use('downloads').then(d=>{ invDownloads=d; }).catch(()=>{});
+  const logoImg=new Image(); logoImg.src='icon-192.png';
   let invBlob=null, invName='';
   /* one-page PDF with the receipt picture (JPEG), page size cw x ch pt */
   function pdfFromJpeg(jpg,pw,ph,cw,ch){
@@ -409,7 +410,8 @@
       ls.forEach((t,k)=>{ g.font=fl; g.fillStyle=cl; g.textAlign='left'; g.fillText(t,X0,y); if(k===0){ g.font=fr; g.fillStyle=cr; g.textAlign='right'; g.fillText(r,X1,y); } y+=lh; }); g.textAlign='left'; }
     function left(t,font,color,lh){ t=tr(t); g.font=font; g.fillStyle=color; wrap(t,font,X1-X0).forEach(l=>{ g.fillText(l,X0,y); y+=lh; }); }
     function dash(){ y+=4; g.strokeStyle='#CFCAC2'; g.lineWidth=1; g.setLineDash([5,4]); g.beginPath(); g.moveTo(X0,y); g.lineTo(X1,y); g.stroke(); g.setLineDash([]); y+=22; }
-    y+=16;
+    y+=6;
+    if(logoImg.complete&&logoImg.naturalWidth){ const LS=72; g.save(); g.beginPath(); g.arc(CX,y+LS/2,LS/2,0,Math.PI*2); g.clip(); g.drawImage(logoImg,CX-LS/2,y,LS,LS); g.restore(); y+=LS+22; } else y+=10;
     center('SAM',F(800,24),ink,26);
     center('НАКЛАДНАЯ',F(600,13),mut,18);
     const num='№ '+String(s.id).slice(-6).toUpperCase();
