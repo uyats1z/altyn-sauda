@@ -53,12 +53,12 @@
   }
 
   /* ===== шаблон таблицы: заголовки, формулы, оформление ===== */
-  const TPL='5';
+  const TPL='6';
   const GREEN={red:0.18,green:0.451,blue:0.2745}, WHITE={red:1,green:1,blue:1}, BLUE={blue:1}, GRAY={red:0.365,green:0.42,blue:0.376};
   const M='#,##0 "₸"', MD='#,##0 "₸";-#,##0 "₸";"-"', DT='dd.mm.yyyy', USD='"$"#,##0;-"$"#,##0', EUR='"€"#,##0;-"€"#,##0';
   const H={
     'Партии':['ID партии','Дата','Фрукт','Закуплено, кг','Цена закупа, ₸/кг','Доставка, ₸','Другие расходы, ₸','Списано, кг','Вес ящика, кг','Цена закупа в валюте (за кг)','Валюта','Курс, ₸',
-      'Вложено всего, ₸','Себестоимость 1 кг, ₸','Продано, кг','Выручка, ₸','Остаток, кг','Прибыль, ₸'],
+      'Вложено всего, ₸','Себестоимость 1 кг, ₸','Продано, кг','Выручка, ₸','Остаток, кг','Прибыль, ₸','Таможня, ₸','Таможня во вложено?'],
     'Продажи':['ID продажи','ID партии','Дата','Продано, кг','Цена, ₸/кг','Оплата','Покупатель','Вернул на Kaspi, ₸','Вернул наличными, ₸','Город','Ящиков','Доставка, ₸','Цена в валюте (за кг)','Валюта','Курс, ₸','Оплатить до',
       'Фрукт','Сумма, ₸','Себестоимость, ₸','Наценка, ₸','Остаток долга, ₸'],
     'Расходы':['ID','Дата','На что','Сумма, ₸','Комментарий'],
@@ -66,7 +66,7 @@
   };
   const AF=(c)=>`=ARRAYFORMULA(IF(LEN(A2:A);${c};))`;
   const FORM={
-    'Партии':{M:AF('D2:D*E2:E+F2:F+G2:G'),N:AF('IF(D2:D=0;0;M2:M/D2:D)'),O:AF("SUMIF('Продажи'!B2:B;A2:A;'Продажи'!D2:D)"),P:AF("SUMIF('Продажи'!B2:B;A2:A;'Продажи'!R2:R)"),Q:AF('D2:D-O2:O-H2:H'),R:AF("P2:P-M2:M-SUMIF('Продажи'!B2:B;A2:A;'Продажи'!L2:L)")},
+    'Партии':{M:AF('D2:D*E2:E+F2:F+G2:G+IF(T2:T="да";S2:S;0)'),N:AF('IF(D2:D=0;0;M2:M/D2:D)'),O:AF("SUMIF('Продажи'!B2:B;A2:A;'Продажи'!D2:D)"),P:AF("SUMIF('Продажи'!B2:B;A2:A;'Продажи'!R2:R)"),Q:AF('D2:D-O2:O-H2:H'),R:AF("P2:P-M2:M-SUMIF('Продажи'!B2:B;A2:A;'Продажи'!L2:L)")},
     'Продажи':{Q:AF("IFERROR(VLOOKUP(B2:B;'Партии'!A2:N;3;FALSE);\"\")"),R:AF('D2:D*E2:E'),S:AF("D2:D*IFERROR(VLOOKUP(B2:B;'Партии'!A2:N;14;FALSE);0)"),T:AF('R2:R-S2:S-L2:L'),U:AF('IF(F2:F="Под реализацию";R2:R-H2:H-I2:I;0)')}
   };
   const SUMCOL2=(val)=>`=ARRAYFORMULA(IF(LEN(A15:A);SUMIF('Партии'!C2:C;A15:A;'Партии'!${val}2:${val});))`;
@@ -88,17 +88,17 @@
     ["=IFERROR(SORT(UNIQUE(FILTER('Партии'!C2:C;LEN('Партии'!C2:C))));\"\")",SUMCOL2('M'),SUMCOL2('P'),SUMCOL2('R'),'',"=IFERROR(SORT(UNIQUE(FILTER('Продажи'!G2:G;'Продажи'!U2:U>0)));\"\")","=ARRAYFORMULA(IF(LEN(F15:F);SUMIF('Продажи'!G2:G;F15:F;'Продажи'!U2:U);))"]
   ];
   const COLS={ // [формат, синий текст]
-    'Партии':[[0,1],[DT,1],[0,1],[0,1],[M,1],[M,1],[M,1],[0,1],[0,1],['#,##0.00',1],[0,1],['#,##0.00 "₸"',1],[M],[M],[0],[MD],[0],[MD]],
+    'Партии':[[0,1],[DT,1],[0,1],[0,1],[M,1],[M,1],[M,1],[0,1],[0,1],['#,##0.00',1],[0,1],['#,##0.00 "₸"',1],[M],[M],[0],[MD],[0],[MD],[M,1],[0,1]],
     'Продажи':[[0,1],[0,1],[DT,1],[0,1],[M,1],[0,1],[0,1],[M,1],[M,1],[0,1],[0,1],[M,1],['#,##0.00',1],[0,1],['#,##0.00 "₸"',1],[DT,1],[0],[M],[M],[MD],[MD]],
     'Расходы':[[0],[DT],[0],[M],[0]],
     'Поставщики':[[0],[0],[0],[DT],[0],[0],[MD],[MD],[MD],[DT]]
   };
   const WID={
-    'Партии':[110,90,150,115,115,115,115,115,100,115,115,115,115,115,115,115,115,115],
+    'Партии':[110,90,150,115,115,115,115,115,100,115,115,115,115,115,115,115,115,115,115,130],
     'Продажи':[110,110,90,110,110,110,150,130,130,110,90,110,115,115,115,105,150,120,120,120,130],
     'Расходы':[140,140,140,140,220],
     'Поставщики':[140,140,140,140,170,170,120,120,120,120],
-    'Итоги':[200,140,110,110,30,220,140,100,110,120,120,100]
+    'Итоги':[200,140,110,110,30,220,140,100,110,120,120,170,110,80,90,90,130]
   };
   const colL=n=>String.fromCharCode(65+n);
   async function applyTemplate(id){
@@ -108,6 +108,12 @@
     Object.keys(H).forEach(n=>data.push({range:`'${n}'!A1:${colL(H[n].length-1)}1`,values:[H[n]]}));
     Object.keys(FORM).forEach(n=>Object.keys(FORM[n]).forEach(c=>data.push({range:`'${n}'!${c}2`,values:[[FORM[n][c]]]})));
     data.push({range:"'Итоги'!A1:H15",values:ITOGI});
+    { const P="'Партии'!", per=(r)=>`;${P}$B$2:$B;">="&$M${r};${P}$B$2:$B;"<="&TODAY())`;
+      const row=(r,label,from)=>[label,from,`=COUNTIFS(${P}$B$2:$B;">="&$M${r};${P}$B$2:$B;"<="&TODAY())`,`=SUMIFS(${P}$D$2:$D${per(r)}`,
+        `=IFERROR(SUM(ARRAYFORMULA(IF((${P}$B$2:$B>=$M${r})*(${P}$B$2:$B<=TODAY())*(${P}$I$2:$I>0);${P}$D$2:$D/${P}$I$2:$I;0)));0)`,`=SUMIFS(${P}$M$2:$M${per(r)}`];
+      data.push({range:"'Итоги'!L3:Q7",values:[['Партии за период','С даты','Партий','Кг','Ящиков','Вложено, ₸'],
+        row(4,'Сегодня','=TODAY()'),row(5,'Эта неделя (7 дней)','=TODAY()-6'),row(6,'Этот месяц','=DATE(YEAR(TODAY());MONTH(TODAY());1)'),
+        ['Считается по дате партии на листе «Партии».','','','','','']]}); }
     data.push({range:"'Итоги'!I3:I6",values:[['Курс валют'],['1 $, ₸'],['1 €, ₸'],['Обновлён']]});
     await api(`${B}/${id}/values:batchClear`,{method:'POST',body:JSON.stringify({ranges:["'Итоги'!A1:H1000"]})});
     await api(`${B}/${id}/values:batchUpdate`,{method:'POST',body:JSON.stringify({valueInputOption:'USER_ENTERED',data})});
@@ -128,6 +134,9 @@
     R(T,3,6,1,2,NF(MD),'numberFormat'); R(T,3,6,2,3,NF(USD),'numberFormat'); R(T,3,6,3,4,NF(EUR),'numberFormat');
     R(T,3,9,6,7,NF(MD),'numberFormat'); R(T,3,9,7,8,NF(USD),'numberFormat');
     R(T,3,5,9,10,{numberFormat:{type:'NUMBER',pattern:'#,##0.00 "₸"'},textFormat:{foregroundColor:BLUE}},'numberFormat,textFormat.foregroundColor');
+    R(T,2,3,11,17,HD,'backgroundColor,textFormat,verticalAlignment,wrapStrategy'); R(T,3,6,11,12,{textFormat:{bold:true}},'textFormat');
+    R(T,3,6,12,13,{numberFormat:{type:'DATE',pattern:DT}},'numberFormat'); R(T,3,6,16,17,NF(MD),'numberFormat'); R(T,3,6,14,15,NF('#,##0'),'numberFormat'); R(T,3,6,15,16,NF('#,##0'),'numberFormat');
+    R(T,6,7,11,12,{textFormat:{italic:true,foregroundColor:GRAY}},'textFormat');
     R(T,13,14,0,4,HD,'backgroundColor,textFormat'); R(T,13,14,5,7,HD,'backgroundColor,textFormat');
     R(T,14,1000,1,4,NF(MD),'numberFormat'); R(T,14,1000,6,7,NF(MD),'numberFormat');
     await api(`${B}/${id}:batchUpdate`,{method:'POST',body:JSON.stringify({requests:rq})});

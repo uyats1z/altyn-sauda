@@ -945,6 +945,7 @@
     syncing=true; setSync('busy','Отправляю…');
     const bRows=state.batches.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''))
       .map(b=>["'"+b.id,b.date,safeText(b.name),b.kg,b.price,b.delivery||0,b.other||0,b.waste||0,b.boxKg||'',b.priceCur&&b.priceCur!=='kzt'?b.priceOrig:'',CURCODE[b.priceCur||'kzt'],b.priceCur&&b.priceCur!=='kzt'?b.rate:'']);
+    const cRows=state.batches.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(b=>[b.customs||0,b.customsIn?'да':'нет']);
     const sRows=[];
     state.batches.forEach(b=>b.sales.forEach(s=>{
       const rk=s.repaid.filter(r=>r.method==='kaspi').reduce((t,r)=>t+r.amount,0);
@@ -954,8 +955,9 @@
     sRows.sort((a,b)=>String(a[2]).localeCompare(String(b[2])));
     try{
       if(bRows.length) await mcp.callTool('Google Sheets','update_values',{spreadsheetId:SHEET_ID,range:`'Партии'!A2:L${bRows.length+1}`,values:bRows},{cache:false});
+      if(cRows.length) await mcp.callTool('Google Sheets','update_values',{spreadsheetId:SHEET_ID,range:`'Партии'!S2:T${cRows.length+1}`,values:cRows},{cache:false});
       if(sRows.length) await mcp.callTool('Google Sheets','update_values',{spreadsheetId:SHEET_ID,range:`'Продажи'!A2:P${sRows.length+1}`,values:sRows},{cache:false});
-      await mcp.callTool('Google Sheets','batch_clear_values',{spreadsheetId:SHEET_ID,ranges:[`'Партии'!A${bRows.length+2}:L`,`'Продажи'!A${sRows.length+2}:P`]},{cache:false});
+      await mcp.callTool('Google Sheets','batch_clear_values',{spreadsheetId:SHEET_ID,ranges:[`'Партии'!A${bRows.length+2}:L`,`'Партии'!S${cRows.length+2}:T`,`'Продажи'!A${sRows.length+2}:P`]},{cache:false});
       const eRows=(state.expenses||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(e=>["'"+e.id,e.date,safeText(e.cat||''),e.amount,e.note?safeText(e.note):'']);
       const pRows=state.batches.filter(b=>b.supCredit&&b.supplier).map(b=>[safeText(b.supplier),phoneOf(b.supplier)?"'"+phoneOf(b.supplier):'',safeText(b.name),b.date,qtyf(b.kg,b.boxKg),b.priceCur&&b.priceCur!=='kzt'?`${CUR[b.priceCur]}${nf(b.priceOrig)}/кг (${money(b.price)})`:`${money(b.price)}/кг`,r2(b.kg*b.price),r2(supPaidSum(b)),supOwed(b),b.supDue||'']);
       if(eRows.length) await mcp.callTool('Google Sheets','update_values',{spreadsheetId:SHEET_ID,range:`'Расходы'!A2:E${eRows.length+1}`,values:eRows},{cache:false});
