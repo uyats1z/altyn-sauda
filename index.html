@@ -175,8 +175,12 @@
       <div class="qty"><input class="huge" id="bPrice" type="text" data-num inputmode="decimal" min="0" step="any"><div class="seg cur" id="bCur"><button data-v="kzt">₸</button><button data-v="usd">$</button><button data-v="eur">€</button></div><div class="seg" id="bPriceUnit"><button data-v="kg">за кг</button><button data-v="box">за ящ.</button><button data-v="t">за т</button></div></div>
       <div class="rateline" id="bRateWrap"><span id="bRateLbl">Курс:</span> <input id="bRate" type="text" data-num inputmode="decimal" min="0" step="any"> ₸</div>
     </div>
-    <label>Расходы: доставка и прочее, ₸<input id="bDelivery" type="text" data-num inputmode="decimal" min="0" step="any" placeholder="0"></label>
-    <input id="bOther" type="hidden" value="">
+    <div class="field">
+      <div class="cap"><span>Расходы на партию, ₸</span><em id="bCostsTotal"></em></div>
+      <div id="bCosts"></div>
+      <button type="button" class="btn small" id="bAddCost">+ Расход (доставка, таможня…)</button>
+      <datalist id="costNames"><option value="Доставка"><option value="Таможня"><option value="Погрузка / разгрузка"><option value="Склад"><option value="Прочее"></datalist>
+    </div>
     <div class="field" hidden><div class="cap">Как брали у поставщика</div><div class="seg wide" id="bSupPay"><button data-v="paid">Оплатил сразу</button><button data-v="credit">Под реализацию</button></div></div>
     <div class="supbox" id="supBox">
       <label>Поставщик (у кого брали)<input id="bSup" list="supList" placeholder="Имя поставщика" autocomplete="off"></label>

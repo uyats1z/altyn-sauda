@@ -80,8 +80,10 @@
   const owed = s => s.pay==='debt' ? Math.max(0, r2(s.kg*s.price - repaidSum(s))) : 0;
   const allSales = () => { const a=[]; state.batches.forEach(b=>b.sales.forEach(s=>a.push({s,b}))); return a; };
 
+  const costsSum = l => (l||[]).reduce((t,x)=>t+(x.amount||0),0);
+  const extraOf = b => Array.isArray(b.costs) ? costsSum(b.costs) : (b.delivery||0)+(b.other||0);
   function calc(b){
-    const purchase=b.kg*b.price, extra=(b.delivery||0)+(b.other||0), cost=purchase+extra, cpk=b.kg>0?cost/b.kg:0;
+    const purchase=b.kg*b.price, extra=extraOf(b), cost=purchase+extra, cpk=b.kg>0?cost/b.kg:0;
     const sold=b.sales.reduce((t,x)=>t+x.kg,0), rev=b.sales.reduce((t,x)=>t+x.kg*x.price,0), ship=b.sales.reduce((t,x)=>t+(x.ship||0),0);
     const waste=b.waste||0, left=Math.max(0,r2(b.kg-sold-waste)), profit=rev-cost-ship;
     return {purchase,extra,cost,cpk,sold,rev,ship,waste,left,profit,avg:sold?rev/sold:0,breakeven:left>0&&profit<0?-profit/left:null};
@@ -135,6 +137,7 @@
             <div>Себестоимость<b>${money(c.cpk)}/кг</b>${b.boxKg?`<span class="subfx" style="color:var(--muted)">${money(c.cpk*b.boxKg)} за ящик</span>`:''}</div>
             <div>Выручка<b>${money(c.rev)}</b>${subfx(c.rev)}</div>
           </div>
+          ${Array.isArray(b.costs)&&b.costs.length?`<div class="callout">Расходы: ${b.costs.map(x=>`${esc(x.name)} <b>${money(x.amount)}</b>`).join(', ')}. Всего <b>${money(c.extra)}</b>.</div>`:''}
           ${c.breakeven!==null?`<div class="callout">Чтобы выйти в ноль, остаток продавайте не дешевле <b>${money(c.breakeven)}</b> за кг${b.boxKg?` (<b>${money(c.breakeven*b.boxKg)}</b> за ящик)`:''}.</div>`:''}
           <div class="cardbtns">
             ${c.left>0?`<button class="btn small primary" data-act="sell">Продать</button>`:''}
@@ -626,7 +629,7 @@
     $('bRateWrap').style.display = foreign?'flex':'none'; if(foreign) $('bRateLbl').textContent=`Курс: 1 ${CUR[b.priceCur]} =`; setN('bRate',foreign ? b.rate : '');
     if(b){ setSeg($('bQtyUnit'),'kg'); setN('bQty',b.kg); setSeg($('bPriceUnit'),'kg'); setN('bPrice',foreign?b.priceOrig:b.price); }
     else { setSeg($('bQtyUnit'),'t'); setN('bQty',''); setSeg($('bPriceUnit'),'kg'); setN('bPrice',''); }
-    const ex=b?(b.delivery||0)+(b.other||0):0; setN('bDelivery',ex||''); $('bOther').value='';
+    { const ex=b?extraOf(b):0; const l=b&&Array.isArray(b.costs)?b.costs:(ex?[{name:'Доставка',amount:ex}]:[]); $('bCosts').innerHTML=''; l.forEach(x=>addCostRow(x.name,x.amount)); if(!l.length) addCostRow('',''); }
     $('bDate').value=b?b.date:today(); $('bErr').textContent='';
     if(b) linkBatchUnit();
     $('bWasteWrap').hidden=!b; setN('bWaste',b&&b.waste?b.waste:''); $('delBatch').hidden=!b; $('bMore').open=false;
@@ -639,11 +642,20 @@
     $('supList').innerHTML=[...new Set(state.batches.map(x=>x.supplier).filter(Boolean).map(s=>s.trim()))].map(n=>`<option value="${esc(n)}">`).join('');
     batchPreview(); $('batchDlg').showModal();
   }
-  ['bQty','bPrice','bBox','bDelivery','bOther'].forEach(i=>$(i).addEventListener('input',batchPreview));
+  ['bQty','bPrice','bBox'].forEach(i=>$(i).addEventListener('input',batchPreview));
+  function addCostRow(name,amount){
+    const d=document.createElement('div'); d.className='costrow'; d.style.cssText='display:flex;gap:6px;margin-bottom:6px;align-items:center';
+    d.innerHTML='<input class="cn" list="costNames" placeholder="Что за расход" autocomplete="off" style="flex:1;min-width:0"><input class="ca" type="text" data-num inputmode="decimal" placeholder="0" style="width:38%"><button type="button" class="iconbtn" aria-label="Убрать расход">✕</button>';
+    d.querySelector('.cn').value=name||''; d.querySelector('.ca').value=amount===''||amount==null?'':fmtIn(amount);
+    d.querySelector('button').addEventListener('click',()=>{ d.remove(); batchPreview(); });
+    d.addEventListener('input',batchPreview); $('bCosts').appendChild(d);
+  }
+  $('bAddCost').addEventListener('click',()=>{ addCostRow('',''); const r=$('bCosts').lastChild; r.querySelector('.cn').focus(); });
+  const readCosts = () => [...$('bCosts').querySelectorAll('.costrow')].map(r=>({name:r.querySelector('.cn').value.trim()||'Расход',amount:num(r.querySelector('.ca').value)})).filter(x=>x.amount>0);
   function batchPreview(){
     if(typeof supSummary==='function'&&$('supBox')&&!$('supBox').hidden) supSummary();
     const kg=batchKg(), box=num($('bBox').value), pk=batchPriceKg();
-    const cost=kg*pk+num($('bDelivery').value)+num($('bOther').value);
+    const ex=costsSum(readCosts()); $('bCostsTotal').textContent = ex ? 'всего '+money(ex) : ''; const cost=kg*pk+ex;
     const qu=segVal($('bQtyUnit')), pu=segVal($('bPriceUnit'));
     $('bQtyHint').textContent = kg ? (qu==='kg'?(box?`${nf(kg/box)} ящ.`:''):`= ${nf(kg)} кг`)+(qu!=='box'&&box&&qu!=='kg'?`, ${nf(kg/box)} ящ.`:'') : '';
     const isCon = segVal($('bSupPay'))==='credit';
@@ -680,7 +692,7 @@
     const supEmail=supCredit&&!$('dealWrap').hidden ? $('bSupEmail').value.trim().toLowerCase() : '';
     if(supEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supEmail)){$('bErr').textContent='Проверьте email поставщика.'; return;}
     if(supEmail&&Auth.google&&supEmail===String(Auth.google.email||'').toLowerCase()){$('bErr').textContent='Это ваш собственный email. Укажите email поставщика.'; return;}
-    const fields={supplier:supName,supCredit,supDue:supCredit?$('bDue').value:'',name,kg,price,priceCur:bc,priceOrig:bc==='kzt'?null:r2(batchPriceOrig()*10000)/10000,rate:bc==='kzt'?null:batchRate(),boxKg:box||null,delivery:num($('bDelivery').value),other:0,date:$('bDate').value||today()};
+    const fields={supplier:supName,supCredit,supDue:supCredit?$('bDue').value:'',name,kg,price,priceCur:bc,priceOrig:bc==='kzt'?null:r2(batchPriceOrig()*10000)/10000,rate:bc==='kzt'?null:batchRate(),boxKg:box||null,costs:readCosts(),delivery:costsSum(readCosts()),other:0,date:$('bDate').value||today()};
     if(editId){
       const b=state.batches.find(x=>x.id===editId); const c=calc(b); const w=num($('bWaste').value);
       if(w<0||kg+1e-9<c.sold+w){$('bErr').textContent=`Уже продано ${kgf(c.sold)}${w?` и списано ${kgf(w)}`:''}, вес партии не может быть меньше.`;return;}
