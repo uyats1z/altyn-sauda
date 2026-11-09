@@ -138,7 +138,7 @@
             <div>Выручка<b>${money(c.rev)}</b>${subfx(c.rev)}</div>
           </div>
           ${b.customs?`<div class="callout">Таможня: ${b.customsCur&&b.customsCur!=='kzt'?`<b>${CUR[b.customsCur]}${nf(b.customsOrig)}</b> по курсу ${nf(b.customsRate)} = `:''}<b>${money(b.customs)}</b> (отдельно, в себестоимость и прибыль не входит).</div>`:''}
-          ${Array.isArray(b.costs)&&b.costs.length?`<div class="callout">Расходы: ${b.costs.map(x=>`${esc(x.name)} <b>${money(x.amount)}</b>`).join(', ')}. Всего <b>${money(c.extra)}</b>.</div>`:''}
+          ${Array.isArray(b.costs)&&b.costs.length?`<div class="callout">Расходы: ${b.costs.map(x=>`${esc(x.name)} <b>${money(x.amount)}</b>${x.cur&&x.cur!=='kzt'?` (${CUR[x.cur]}${nf(x.orig)})`:''}`).join(', ')}. Всего <b>${money(c.extra)}</b>.</div>`:''}
           ${c.breakeven!==null?`<div class="callout">Чтобы выйти в ноль, остаток продавайте не дешевле <b>${money(c.breakeven)}</b> за кг${b.boxKg?` (<b>${money(c.breakeven*b.boxKg)}</b> за ящик)`:''}.</div>`:''}
           <div class="cardbtns">
             ${c.left>0?`<button class="btn small primary" data-act="sell">Продать</button>`:''}
@@ -305,11 +305,15 @@
   }
   /* expenses */
   let expCat='Аренда';
-  function openExp(){ expCat='Аренда'; setSeg($('expCats'),expCat); setN('expAmt',''); $('expNote').value=''; $('expDate').value=today(); $('expErr').textContent=''; $('expDlg').showModal(); }
+  const expRate = () => { const c=$('expCur').value; return c==='kzt'?1:((state.rates||{})[c]||0); };
+  function expUi(){ const c=$('expCur').value, v=num($('expAmt').value), rt=expRate(); $('expHint').textContent = c==='kzt'||!v ? '' : rt>0 ? `1 ${CUR[c]} = ${nf(rt)} ₸, это ${money(v*rt)}` : 'Нет курса: укажите его в «Курс валют»'; }
+  $('expCur').addEventListener('change',expUi); $('expAmt').addEventListener('input',expUi);
+  function openExp(){ expCat='Аренда'; setSeg($('expCats'),expCat); setN('expAmt',''); $('expCur').value='kzt'; expUi(); $('expNote').value=''; $('expDate').value=today(); $('expErr').textContent=''; $('expDlg').showModal(); }
   segInit($('expCats'),v=>{ expCat=v; });
   $('saveExp').addEventListener('click',()=>{
     const a=num($('expAmt').value); if(a<=0){ $('expErr').textContent='Укажите сумму.'; return; }
-    state.expenses.push({id:uid(),date:$('expDate').value||today(),cat:expCat,amount:a,note:$('expNote').value.trim(),t:Date.now()});
+    const ec=$('expCur').value, er=expRate(); if(ec!=='kzt'&&!(er>0)){ $('expErr').textContent='Нет курса. Укажите его в «Курс валют».'; return; }
+    state.expenses.push({id:uid(),date:$('expDate').value||today(),cat:expCat,amount:r2(a*er),cur:ec,orig:ec==='kzt'?null:a,rate:ec==='kzt'?null:er,note:$('expNote').value.trim(),t:Date.now()});
     $('expDlg').close(); if(tab!=='report'){ tab='report'; } changed();
   });
 
@@ -358,7 +362,7 @@
       </div>
       ${chart}
       <div class="sechead"><h3>Общие расходы</h3><button class="btn small" data-act="addexp">+ Расход</button></div>
-      ${exps.length?exps.map(e=>`<div class="row"><div><b>${esc(e.cat)}</b>${e.note?` <span class="m">${esc(e.note)}</span>`:''}<div class="m">${dshort(e.date)}</div></div><div style="display:flex;align-items:center"><b class="neg">−${money(e.amount)}</b><button class="iconbtn" data-act="delexp" data-id="${e.id}" aria-label="Удалить расход">✕</button></div></div>`).join(''):'<div class="empty" style="padding:18px">Расходов за этот период нет. Аренду склада, грузчиков, бензин и зарплату записывайте сюда, тогда прибыль будет точной.</div>'}
+      ${exps.length?exps.map(e=>`<div class="row"><div><b>${esc(e.cat)}</b>${e.note?` <span class="m">${esc(e.note)}</span>`:''}<div class="m">${dshort(e.date)}${e.cur&&e.cur!=='kzt'?`, ${CUR[e.cur]}${nf(e.orig)} по курсу ${nf(e.rate)}`:''}</div></div><div style="display:flex;align-items:center"><b class="neg">−${money(e.amount)}</b><button class="iconbtn" data-act="delexp" data-id="${e.id}" aria-label="Удалить расход">✕</button></div></div>`).join(''):'<div class="empty" style="padding:18px">Расходов за этот период нет. Аренду склада, грузчиков, бензин и зарплату записывайте сюда, тогда прибыль будет точной.</div>'}
       <div class="sechead"><h3>Под реализацию: вы должны</h3></div>
       ${sups.length?sups.map(p=>{ const ph=phoneOf(p.name); return `<article class="card"><div class="head" style="cursor:default"><span class="name">${esc(p.name)}</span><span class="right neg">${money(p.owed)}<small>вы должны</small>${subfx(p.owed)}</span></div>
         <div style="padding:0 14px 10px">${p.items.filter(x=>supOwed(x.b)>0).map(x=>supLine(x.b)).join('')}</div>
@@ -655,7 +659,7 @@
     $('bRateWrap').style.display = foreign?'flex':'none'; if(foreign) $('bRateLbl').textContent=`Курс: 1 ${CUR[b.priceCur]} =`; setN('bRate',foreign ? b.rate : '');
     if(b){ setSeg($('bQtyUnit'),'kg'); setN('bQty',b.kg); setSeg($('bPriceUnit'),'kg'); setN('bPrice',foreign?b.priceOrig:b.price); }
     else { setSeg($('bQtyUnit'),'t'); setN('bQty',''); setSeg($('bPriceUnit'),'kg'); setN('bPrice',''); }
-    { const ex=b?extraOf(b):0; const l=b&&Array.isArray(b.costs)?b.costs:(ex?[{name:'Доставка',amount:ex}]:[]); $('bCosts').innerHTML=''; l.forEach(x=>addCostRow(x.name,x.amount)); if(!l.length) addCostRow('',''); const cc=b&&b.customsCur&&b.customsCur!=='kzt'?b.customsCur:'kzt'; setSeg($('bCustomsCur'),cc); setN('bCustoms',b&&b.customs?(cc==='kzt'?b.customs:b.customsOrig):''); setN('bCustomsRate',cc==='kzt'?'':b.customsRate); customsUi(); }
+    { const ex=b?extraOf(b):0; const l=b&&Array.isArray(b.costs)?b.costs:(ex?[{name:'Доставка',amount:ex}]:[]); $('bCosts').innerHTML=''; l.forEach(x=>addCostRow(x.name,x.cur&&x.cur!=='kzt'?x.orig:x.amount,x.cur,x.rate)); if(!l.length) addCostRow('',''); const cc=b&&b.customsCur&&b.customsCur!=='kzt'?b.customsCur:'kzt'; setSeg($('bCustomsCur'),cc); setN('bCustoms',b&&b.customs?(cc==='kzt'?b.customs:b.customsOrig):''); setN('bCustomsRate',cc==='kzt'?'':b.customsRate); customsUi(); }
     $('bDate').value=b?b.date:today(); $('bErr').textContent='';
     if(b) linkBatchUnit();
     $('bWasteWrap').hidden=!b; setN('bWaste',b&&b.waste?b.waste:''); $('delBatch').hidden=!b; $('bMore').open=false;
@@ -675,15 +679,22 @@
     $('bCustomsHint').textContent = c!=='kzt'&&num($('bCustoms').value)&&num($('bCustomsRate').value) ? '= '+money(customsKzt()) : ''; }
   segInit($('bCustomsCur'),v=>{ if(v!=='kzt'&&!num($('bCustomsRate').value)){ const r=(state.rates||{})[v]; if(r>0) setN('bCustomsRate',r); } customsUi(); });
   ['bCustoms','bCustomsRate'].forEach(i=>$(i).addEventListener('input',customsUi));
-  function addCostRow(name,amount){
-    const d=document.createElement('div'); d.className='costrow'; d.style.cssText='display:flex;gap:6px;margin-bottom:6px;align-items:center';
-    d.innerHTML='<input class="cn" list="costNames" placeholder="Что за расход" autocomplete="off" style="flex:1;min-width:0"><input class="ca" type="text" data-num inputmode="decimal" placeholder="0" style="width:38%"><button type="button" class="iconbtn" aria-label="Убрать расход">✕</button>';
-    d.querySelector('.cn').value=name||''; d.querySelector('.ca').value=amount===''||amount==null?'':fmtIn(amount);
+  const rateFor = (c,batchCtx) => c==='kzt'?1 : (batchCtx&&segVal($('bCur'))===c&&num($('bRate').value)>0 ? num($('bRate').value) : ((state.rates||{})[c]||0));
+  const CURSEL = '<option value="kzt">₸</option><option value="usd">$</option><option value="eur">€</option>';
+  function costHint(r){ const c=r.querySelector('.cc').value, v=num(r.querySelector('.ca').value), h=r.querySelector('.ch'); const rt=+r.dataset.rate||0;
+    h.textContent = c==='kzt' ? '' : (!v ? '' : rt>0 ? `1 ${CUR[c]} = ${nf(rt)} ₸, это ${money(v*rt)}` : 'Нет курса: укажите его в «Курс валют»'); h.style.color = c!=='kzt'&&v&&!(rt>0)?'var(--loss)':'var(--muted)'; }
+  function addCostRow(name,amount,cur,rate){
+    const d=document.createElement('div'); d.className='costrow'; d.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;align-items:center';
+    d.innerHTML='<input class="cn" list="costNames" placeholder="Что за расход" autocomplete="off" style="flex:1;min-width:0"><input class="ca" type="text" data-num inputmode="decimal" placeholder="0" style="width:32%"><select class="cc" aria-label="Валюта" style="width:auto;padding:0 6px">'+CURSEL+'</select><button type="button" class="iconbtn" aria-label="Убрать расход">✕</button><div class="ch" style="flex-basis:100%;font-size:.8rem;color:var(--muted)"></div>';
+    d.querySelector('.cn').value=name||''; d.querySelector('.cc').value=cur||'kzt'; d.dataset.rate = (cur&&cur!=='kzt') ? (rate||rateFor(cur,true)) : 1;
+    d.querySelector('.ca').value=amount===''||amount==null?'':fmtIn(amount);
+    d.querySelector('.cc').addEventListener('change',()=>{ const c=d.querySelector('.cc').value; d.dataset.rate=rateFor(c,true); costHint(d); batchPreview(); });
     d.querySelector('button').addEventListener('click',()=>{ d.remove(); batchPreview(); });
-    d.addEventListener('input',batchPreview); $('bCosts').appendChild(d);
+    d.addEventListener('input',()=>{ costHint(d); batchPreview(); }); $('bCosts').appendChild(d); costHint(d);
   }
   $('bAddCost').addEventListener('click',()=>{ addCostRow('',''); const r=$('bCosts').lastChild; r.querySelector('.cn').focus(); });
-  const readCosts = () => [...$('bCosts').querySelectorAll('.costrow')].map(r=>({name:r.querySelector('.cn').value.trim()||'Расход',amount:num(r.querySelector('.ca').value)})).filter(x=>x.amount>0);
+  const readCosts = () => [...$('bCosts').querySelectorAll('.costrow')].map(r=>{ const c=r.querySelector('.cc').value, v=num(r.querySelector('.ca').value), rt=c==='kzt'?1:(+r.dataset.rate||0);
+    return {name:r.querySelector('.cn').value.trim()||'Расход',amount:r2(v*rt),cur:c,orig:c==='kzt'?null:v,rate:c==='kzt'?null:rt,noRate:c!=='kzt'&&v>0&&!(rt>0)}; }).filter(x=>x.amount>0||x.noRate);
   function batchPreview(){
     if(typeof supSummary==='function'&&$('supBox')&&!$('supBox').hidden) supSummary();
     const kg=batchKg(), box=num($('bBox').value), pk=batchPriceKg();
@@ -715,6 +726,7 @@
   $('saveBatch').addEventListener('click',()=>{
     const name=$('bName').value.trim(), kg=r2(batchKg()), price=batchPriceKg(), box=num($('bBox').value);
     if((segVal($('bQtyUnit'))==='box'||segVal($('bPriceUnit'))==='box')&&!box){$('bErr').textContent='Укажите вес одного ящика.';return;}
+    if(readCosts().some(x=>x.noRate)){$('bErr').textContent='Для расхода в валюте нет курса. Укажите его в «Курс валют».';return;}
     if(customsCur()!=='kzt'&&num($('bCustoms').value)>0&&!(num($('bCustomsRate').value)>0)){$('bErr').textContent='Укажите курс валюты для таможни.';return;}
     if(segVal($('bCur'))!=='kzt'&&!(batchRate()>0)){$('bErr').textContent='Укажите курс валюты.';return;}
     if(!name||kg<=0||price<=0){$('bErr').textContent='Укажите фрукт, количество и цену закупа.';return;}
@@ -725,7 +737,7 @@
     const supEmail=supCredit&&!$('dealWrap').hidden ? $('bSupEmail').value.trim().toLowerCase() : '';
     if(supEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supEmail)){$('bErr').textContent='Проверьте email поставщика.'; return;}
     if(supEmail&&Auth.google&&supEmail===String(Auth.google.email||'').toLowerCase()){$('bErr').textContent='Это ваш собственный email. Укажите email поставщика.'; return;}
-    const fields={supplier:supName,supCredit,supDue:supCredit?$('bDue').value:'',name,kg,price,priceCur:bc,priceOrig:bc==='kzt'?null:r2(batchPriceOrig()*10000)/10000,rate:bc==='kzt'?null:batchRate(),boxKg:box||null,costs:readCosts(),customs:r2(customsKzt()),customsCur:customsCur(),customsOrig:customsCur()==='kzt'?null:num($('bCustoms').value),customsRate:customsCur()==='kzt'?null:num($('bCustomsRate').value),delivery:costsSum(readCosts()),other:0,date:$('bDate').value||today()};
+    const fields={supplier:supName,supCredit,supDue:supCredit?$('bDue').value:'',name,kg,price,priceCur:bc,priceOrig:bc==='kzt'?null:r2(batchPriceOrig()*10000)/10000,rate:bc==='kzt'?null:batchRate(),boxKg:box||null,costs:readCosts().map(({noRate,...x})=>x),customs:r2(customsKzt()),customsCur:customsCur(),customsOrig:customsCur()==='kzt'?null:num($('bCustoms').value),customsRate:customsCur()==='kzt'?null:num($('bCustomsRate').value),delivery:costsSum(readCosts()),other:0,date:$('bDate').value||today()};
     if(editId){
       const b=state.batches.find(x=>x.id===editId); const c=calc(b); const w=num($('bWaste').value);
       if(w<0||kg+1e-9<c.sold+w){$('bErr').textContent=`Уже продано ${kgf(c.sold)}${w?` и списано ${kgf(w)}`:''}, вес партии не может быть меньше.`;return;}

@@ -281,7 +281,7 @@
   <div class="dlg">
     <h2>Расход <button class="iconbtn" data-close aria-label="Закрыть">✕</button></h2>
     <div class="field"><div class="cap">На что</div><div class="chipset" id="expCats"><button data-v="Аренда">Аренда</button><button data-v="Грузчики">Грузчики</button><button data-v="Бензин">Бензин</button><button data-v="Зарплата">Зарплата</button><button data-v="Другое">Другое</button></div></div>
-    <label>Сумма, ₸<input class="huge" id="expAmt" type="text" data-num inputmode="decimal"></label>
+    <div class="field"><div class="cap"><span>Сумма</span><em id="expHint"></em></div><div class="qty"><input class="huge" id="expAmt" type="text" data-num inputmode="decimal"><select id="expCur" aria-label="Валюта"><option value="kzt">₸</option><option value="usd">$</option><option value="eur">€</option></select></div></div>
     <label>Комментарий<input id="expNote" placeholder="необязательно" autocomplete="off"></label>
     <label>Дата<input id="expDate" type="date"></label>
     <div class="err" id="expErr"></div>
