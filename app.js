@@ -371,7 +371,7 @@
 
   /* invoice */
   let invDownloads=null; if(window.claude&&window.claude.use) claude.use('downloads').then(d=>{ invDownloads=d; }).catch(()=>{});
-  const logoImg=new Image(); logoImg.src='icon-192.png';
+  const logoImg=new Image(); logoImg.src='sam-icon-192.png';
   let invBlob=null, invName='';
   /* one-page PDF with the receipt picture (JPEG), page size cw x ch pt */
   function pdfFromJpeg(jpg,pw,ph,cw,ch){
