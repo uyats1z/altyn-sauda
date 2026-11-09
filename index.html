@@ -88,6 +88,7 @@
 
 <main class="content">
   <h1 class="vtitle" id="vTitle">Партии</h1>
+  <button class="btn dealbar" id="dealBar" hidden>Заявки на согласие <span class="count" id="dealCount" hidden></span></button>
   <div id="view"></div>
 </main>
 
@@ -181,6 +182,10 @@
       <label>Поставщик (у кого брали)<input id="bSup" list="supList" placeholder="Имя поставщика" autocomplete="off"></label>
       <datalist id="supList"></datalist>
       <label>Оплатить до<input id="bDue" type="date"></label>
+      <div id="dealWrap" hidden>
+        <label>Email поставщика (Google), чтобы он согласился в приложении<input id="bSupEmail" type="email" inputmode="email" autocapitalize="none" placeholder="name@gmail.com" autocomplete="off"></label>
+        <div class="dealinfo" id="bDealInfo"></div>
+      </div>
       <div class="supsum" id="supSum"></div>
     </div>
     <details class="more" id="bMore"><summary>Другая дата, порча</summary><div class="inner">
@@ -304,10 +309,19 @@
   </div>
 </dialog>
 
+<dialog id="dealsDlg">
+  <div class="dlg">
+    <h2>Заявки на согласие <button class="iconbtn" data-close aria-label="Закрыть">✕</button></h2>
+    <div id="dealsBody"></div>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+
 <script src="config.js"></script>
 <script src="app-config.js"></script>
 <script src="gsheet.js"></script>
 <script src="auth.js"></script>
+<script type="module" src="deals.js"></script>
 <script>if("serviceWorker" in navigator&&location.protocol!=="file:")addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
 </body>
 </html>

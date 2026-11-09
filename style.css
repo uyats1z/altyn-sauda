@@ -377,3 +377,14 @@ dialog[open]::backdrop{animation:fadeIn .4s ease both}
 [data-layout="desktop"] .money div{flex-wrap:wrap;column-gap:10px}
 .money .subfx{flex:0 0 100%;text-align:right;font-size:.78rem;line-height:1.2}
 .money .subfx:empty{display:none}
+
+/* заявки на согласие */
+.dealbar{width:100%;margin:0 0 10px;display:flex;justify-content:center;align-items:center;gap:6px}
+.dealbar .count{min-width:20px;font-size:.75rem;background:var(--loss);color:#fff;border-radius:10px;padding:0 6px;line-height:20px;text-align:center}
+.dealinfo{font-size:.85rem;color:var(--muted);margin-top:6px}
+.dealinfo:empty{display:none}
+.dealsec{margin:4px 0 2px;font-size:.8rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.dealcard{border:1px solid var(--line,rgba(0,0,0,.12));border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.dealcard .btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:min(92vw,420px);background:var(--ink);color:var(--surface);padding:10px 14px;border-radius:12px;font-size:.9rem;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.toast[hidden]{display:none}

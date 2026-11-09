@@ -128,7 +128,7 @@
           <span class="sub">${dshort(b.date)}, ${b.supCredit?`взяли под реализацию у ${esc(b.supplier||'')}: `:''}${qtyf(b.kg,b.boxKg)}, ${b.supCredit?'по':'закуп'} ${b.priceCur&&b.priceCur!=='kzt'?`${curPrice(b.priceOrig,b.priceCur)}/кг по курсу ${nf(b.rate)} = `:''}${money(b.price)}/кг</span>
         </button>
         <div class="bar" aria-hidden="true"><i class="s" style="width:${sP}%"></i><i class="w" style="width:${wP}%"></i></div>
-        <div class="legend"><span>Продано ${qtyf(c.sold,b.boxKg)}</span>${c.waste?`<span>Порча ${kgf(c.waste)}</span>`:''}<span>Осталось ${qtyf(c.left,b.boxKg)}</span>${c.left>0?ageTag(b.date,'лежит',5,10):''}</div>
+        <div class="legend">${b.deal?dealTag(b.deal):''}<span>Продано ${qtyf(c.sold,b.boxKg)}</span>${c.waste?`<span>Порча ${kgf(c.waste)}</span>`:''}<span>Осталось ${qtyf(c.left,b.boxKg)}</span>${c.left>0?ageTag(b.date,'лежит',5,10):''}</div>
         ${isOpen?`<div class="body">
           <div class="facts">
             <div>Вложено<b>${money(c.cost)}</b>${subfx(c.cost)}</div>
@@ -540,7 +540,9 @@
   segInit($('sPriceUnit'),(v)=>{ const b=curBatch(); const p=num($('sPrice').value); if(p&&b&&b.boxKg) setN('sPrice',r2(v==='box'?p*b.boxKg:p/b.boxKg)); salePreview(); });
   segInit($('sPay'),v=>{payMode=v; $('sDueWrap').hidden=v!=='debt'; salePreview();});
   $('openSale').addEventListener('click',()=>openSale(null));
+  let pendingDeal=null;
   function openSale(id){
+    pendingDeal=null;
     const avail=state.batches.filter(b=>calc(b).left>0).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     if(!avail.length) return;
     saleBatch = id&&avail.some(b=>b.id===id) ? id : avail[0].id;
@@ -586,6 +588,8 @@
     const boxes = b.boxKg ? r2(kg/b.boxKg) : null;
     const sc=segVal($('sCur'));
     b.sales.push({id:uid(),kg,price:pk,priceCur:sc,priceOrig:sc==='kzt'?null:r2(salePriceOrig()*10000)/10000,rate:sc==='kzt'?null:saleRate(),priceUnit:segVal($('sPriceUnit')),boxes,date:$('sDate').value||today(),t:Date.now(),pay:payMode,due:payMode==='debt'?$('sDue').value:'',buyer,city,ship:num($('sShip').value),repaid:[]});
+    if(pendingDeal){ const ns=b.sales[b.sales.length-1]; ns.dealId=pendingDeal.id; const did=pendingDeal.id; pendingDeal=null;
+      window.Deals.respond(did,'accepted').then(()=>{ toast('Заявка принята, запись добавлена.'); refreshDeals(); }).catch(()=>toast('Продажа записана, но заявка не отметилась принятой. Откройте «Заявки» и повторите.')); }
     $('saleDlg').close(); changed();
   });
 
@@ -628,6 +632,9 @@
     $('bWasteWrap').hidden=!b; setN('bWaste',b&&b.waste?b.waste:''); $('delBatch').hidden=!b; $('bMore').open=false;
     $('bSup').value=b&&b.supplier?b.supplier:''; setSeg($('bSupPay'), con?'credit':'paid');
     $('bDue').value = b&&b.supDue ? b.supDue : (()=>{ const d=new Date(today()+'T00:00'); d.setDate(d.getDate()+14); return iso(d); })();
+    { const dl=b&&b.deal; $('dealWrap').hidden=!(Auth.google&&window.Deals);
+      $('bSupEmail').value = (dl&&dl.toEmail) || ((state.people[key(b&&b.supplier||'')]||{}).email||'');
+      $('bDealInfo').textContent = dl ? dealInfoText(dl) : ''; }
     supToggle();
     $('supList').innerHTML=[...new Set(state.batches.map(x=>x.supplier).filter(Boolean).map(s=>s.trim()))].map(n=>`<option value="${esc(n)}">`).join('');
     batchPreview(); $('batchDlg').showModal();
@@ -656,6 +663,7 @@
     $('supSum').innerHTML = `Взяли <b>${qtyf(kg,box||null)}</b> по <b>${esc(priceTxt)}</b>, к оплате <b>${money(kg*pk)}</b>${$('bDue').value?` до <b>${dshort($('bDue').value)}</b>`:''}`;
   }
   segInit($('bSupPay'),supToggle);
+  $('bSup').addEventListener('change',()=>{ const e=(state.people[key($('bSup').value)]||{}).email; if(e&&!$('bSupEmail').value) $('bSupEmail').value=e; });
   ['bQty','bPrice','bBox','bRate','bDue'].forEach(i=>$(i).addEventListener('input',supSummary));
   $('bDue').addEventListener('change',supSummary);
   $('delBatch').addEventListener('click',()=>{ const b=state.batches.find(x=>x.id===editId); if(!b) return; $('batchDlg').close();
@@ -669,13 +677,19 @@
     const supName=$('bSup').value.trim(), supCredit=segVal($('bSupPay'))==='credit';
     if(supCredit&&!supName){$('bErr').textContent='Укажите поставщика, у которого взяли под реализацию.'; return;}
     if(supCredit&&!$('bDue').value){$('bErr').textContent='Укажите, до какого числа нужно оплатить.'; return;}
+    const supEmail=supCredit&&!$('dealWrap').hidden ? $('bSupEmail').value.trim().toLowerCase() : '';
+    if(supEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supEmail)){$('bErr').textContent='Проверьте email поставщика.'; return;}
+    if(supEmail&&Auth.google&&supEmail===String(Auth.google.email||'').toLowerCase()){$('bErr').textContent='Это ваш собственный email. Укажите email поставщика.'; return;}
     const fields={supplier:supName,supCredit,supDue:supCredit?$('bDue').value:'',name,kg,price,priceCur:bc,priceOrig:bc==='kzt'?null:r2(batchPriceOrig()*10000)/10000,rate:bc==='kzt'?null:batchRate(),boxKg:box||null,delivery:num($('bDelivery').value),other:0,date:$('bDate').value||today()};
     if(editId){
       const b=state.batches.find(x=>x.id===editId); const c=calc(b); const w=num($('bWaste').value);
       if(w<0||kg+1e-9<c.sold+w){$('bErr').textContent=`Уже продано ${kgf(c.sold)}${w?` и списано ${kgf(w)}`:''}, вес партии не может быть меньше.`;return;}
       fields.waste=w; Object.assign(b,fields);
     } else { const b=Object.assign({id:uid(),sales:[],waste:0},fields); state.batches.push(b); open[b.id]=true; tab='batches'; }
+    const saved=editId?state.batches.find(x=>x.id===editId):state.batches[state.batches.length-1];
+    if(supEmail){ state.people[key(supName)]=Object.assign({},state.people[key(supName)],{email:supEmail}); }
     $('batchDlg').close(); changed();
+    if(supEmail) maybeSendDeal(saved,supEmail);
   });
 
   /* ---------- payment dialog ---------- */
@@ -732,6 +746,80 @@
     if(u<0||e<0||(!u&&!e)){ $('rErr').textContent='Укажите хотя бы курс доллара.'; return; }
     state.rates={usd:u,eur:e,date:today()}; $('rateDlg').close(); changed();
   });
+
+  /* ---------- заявки на согласие (под реализацию) ---------- */
+  let toastT=null;
+  function toast(t){ const el=$('toast'); el.textContent=t; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{el.hidden=true;},5000); }
+  const DEAL_ST={pending:'ждёт согласия',accepted:'поставщик согласен',declined:'поставщик отклонил',cancelled:'отозвана'};
+  function dealTag(d){ const c={pending:'warn',accepted:'paid',declined:'debt'}[d.status]; return c!==undefined?`<span class="tag ${c}">${DEAL_ST[d.status]}</span>`:''; }
+  function dealInfoText(d){ return `Заявка поставщику ${d.toEmail}: ${DEAL_ST[d.status]||d.status}.`; }
+  const dealFp = (b,email) => [b.name,b.kg,b.price,b.supDue,b.boxKg||'',email].join('|');
+  async function maybeSendDeal(b,email){
+    if(!b||!window.Deals||!Auth.google) return;
+    const fp=dealFp(b,email), old=b.deal;
+    if(old&&old.fp===fp) return;
+    if(old&&old.status==='accepted') return;
+    try{
+      if(old&&old.status==='pending'){ try{ await window.Deals.respond(old.id,'cancelled'); }catch(e){} }
+      const id=await window.Deals.send({fromEmail:Auth.google.email,fromName:Auth.google.name||Auth.google.email,toEmail:email,toName:b.supplier,fruit:b.name,kg:b.kg,boxKg:b.boxKg,price:b.price,due:b.supDue,date:b.date});
+      b.deal={id,status:'pending',toEmail:email,fp}; changed();
+      toast('Заявка отправлена поставщику. Он увидит её в приложении.');
+      refreshDeals();
+    }catch(e){ toast((e&&e.message)||'Не удалось отправить заявку.'); }
+  }
+  let dealsCache={incoming:[],outgoing:[]};
+  async function refreshDeals(){
+    if(!window.Deals||!Auth.google||!window.Deals.user()){ renderDealBar(); return; }
+    try{
+      const [inc,out]=await Promise.all([window.Deals.incoming(),window.Deals.outgoing()]);
+      dealsCache={incoming:inc,outgoing:out}; let ch=false;
+      out.forEach(d=>{ const b=state.batches.find(x=>x.deal&&x.deal.id===d.id); if(b&&b.deal.status!==d.status){ b.deal.status=d.status; ch=true; } });
+      if(ch) changed();
+    }catch(e){}
+    renderDealBar(); if($('dealsDlg').open) renderDeals();
+  }
+  function renderDealBar(){
+    const bar=$('dealBar'); bar.hidden=!(Auth.google&&window.Deals);
+    const n=dealsCache.incoming.length; $('dealCount').hidden=!n; $('dealCount').textContent=n;
+  }
+  function renderDeals(){
+    const inc=dealsCache.incoming, out=dealsCache.outgoing.slice().sort((a,b)=>((b.createdAt&&b.createdAt.seconds)||0)-((a.createdAt&&a.createdAt.seconds)||0));
+    const qty=d=>qtyf(d.kg,d.boxKg||null);
+    let h=`<div class="dealsec">Входящие</div>`;
+    h+=inc.length?inc.map(d=>`<div class="dealcard"><div><b>${esc(d.fromName||d.fromEmail)}</b> (${esc(d.fromEmail)}) берёт у вас под реализацию:<br><b>${esc(d.fruit)}</b>, ${qty(d)} по ${money(d.price)}/кг, на ${money(d.kg*d.price)}${d.due?`, оплатить до ${dshort(d.due)}`:''}</div>
+      <div class="btnrow"><button class="btn small primary" data-deal="accept" data-id="${esc(d.id)}">Принять</button><button class="btn small" data-deal="decline" data-id="${esc(d.id)}">Отклонить</button></div></div>`).join(''):'<div class="empty" style="padding:12px">Новых заявок нет.</div>';
+    h+=`<div class="dealsec">Мои заявки</div>`;
+    h+=out.length?out.map(d=>{ const ph=phoneOf(d.toName||''); const link=`${location.origin}${location.pathname}`;
+      const wa=ph?`<a class="btn small wa" target="_blank" rel="noopener" href="${waLink(ph,`Здравствуйте! Взял у вас под реализацию ${d.fruit}, ${qty(d)} по ${money(d.price)}/кг. Подтвердите, пожалуйста, в Altyn Sauda (вход через Google ${d.toEmail}): ${link}`)}">Напомнить в WhatsApp</a>`:'';
+      return `<div class="dealcard"><div><b>${esc(d.toName||d.toEmail)}</b> (${esc(d.toEmail)}): ${esc(d.fruit)}, ${qty(d)} по ${money(d.price)}/кг ${dealTag(d)}</div>${d.status==='pending'?`<div class="btnrow"><button class="btn small" data-deal="cancel" data-id="${esc(d.id)}">Отозвать</button>${wa}</div>`:''}</div>`; }).join(''):'<div class="empty" style="padding:12px">Вы пока не отправляли заявок. Они создаются, когда вы берёте товар под реализацию и указываете email поставщика.</div>';
+    $('dealsBody').innerHTML=h;
+  }
+  $('dealBar').addEventListener('click',async()=>{
+    try{ await window.Deals.ensureAuth(Auth.google.email); }catch(e){ toast((e&&e.message)||'Не удалось войти.'); return; }
+    await refreshDeals(); renderDeals(); $('dealsDlg').showModal();
+  });
+  $('dealsBody').addEventListener('click',async e=>{
+    const el=e.target.closest('[data-deal]'); if(!el) return;
+    const d=[...dealsCache.incoming,...dealsCache.outgoing].find(x=>x.id===el.dataset.id); if(!d) return;
+    const act=el.dataset.deal;
+    try{
+      if(act==='decline'){ await window.Deals.respond(d.id,'declined'); toast('Заявка отклонена.'); await refreshDeals(); }
+      else if(act==='cancel'){ await window.Deals.respond(d.id,'cancelled'); toast('Заявка отозвана.'); await refreshDeals(); }
+      else if(act==='accept'){
+        const avail=state.batches.filter(b=>calc(b).left>0);
+        if(!avail.length){ $('dealsDlg').close(); ask('На складе нет товара для записи','Принять заявку без записи в продажи? Продажу можно добавить позже вручную.',async()=>{ try{ await window.Deals.respond(d.id,'accepted'); toast('Заявка принята.'); refreshDeals(); }catch(er){ toast('Не удалось принять заявку.'); } }); return; }
+        const fk=key(d.fruit), match=avail.find(b=>key(b.name)===fk)||avail[0];
+        $('dealsDlg').close(); openSale(match.id);
+        payMode='debt'; setSeg($('sPay'),'debt'); $('sDueWrap').hidden=false;
+        $('sBuyer').value=d.fromName||d.fromEmail; setSeg($('sQtyUnit'),'kg'); setSeg($('sPriceUnit'),'kg'); setSeg($('sCur'),'kzt');
+        setN('sQty',d.kg); setN('sPrice',d.price); if(d.due) $('sDue').value=d.due; salePreview();
+        pendingDeal=d;
+      }
+    }catch(er){ toast('Не удалось выполнить действие. Проверьте интернет и повторите.'); }
+  });
+  window.addEventListener('deals-ready',()=>{ if(window.Deals) window.Deals.ready().then(refreshDeals); });
+  if(window.Deals) window.Deals.ready().then(refreshDeals);
+  renderDealBar();
 
   /* ---------- persistence ---------- */
   function changed(){ render(); clearTimeout(saveTimer); saveTimer=setTimeout(save,400); scheduleSync(); }
