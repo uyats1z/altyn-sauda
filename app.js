@@ -634,7 +634,7 @@
     $('bDue').value = b&&b.supDue ? b.supDue : (()=>{ const d=new Date(today()+'T00:00'); d.setDate(d.getDate()+14); return iso(d); })();
     { const dl=b&&b.deal; $('dealWrap').hidden=!(Auth.google&&window.Deals);
       $('bSupEmail').value = (dl&&dl.toEmail) || ((state.people[key(b&&b.supplier||'')]||{}).email||'');
-      $('bDealInfo').textContent = dl ? dealInfoText(dl) : ''; }
+      renderDealInfo(dl); }
     supToggle();
     $('supList').innerHTML=[...new Set(state.batches.map(x=>x.supplier).filter(Boolean).map(s=>s.trim()))].map(n=>`<option value="${esc(n)}">`).join('');
     batchPreview(); $('batchDlg').showModal();
@@ -750,8 +750,22 @@
   /* ---------- заявки на согласие (под реализацию) ---------- */
   let toastT=null;
   function toast(t){ const el=$('toast'); el.textContent=t; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{el.hidden=true;},5000); }
-  const DEAL_ST={pending:'ждёт согласия',accepted:'поставщик согласен',declined:'поставщик отклонил',cancelled:'отозвана'};
+  const DEAL_ST={pending:'ждёт согласия',accepted:'поставщик согласен',declined:'поставщик отклонил',cancelled:'отозвана вами'};
   function dealTag(d){ const c={pending:'warn',accepted:'paid',declined:'debt'}[d.status]; return c!==undefined?`<span class="tag ${c}">${DEAL_ST[d.status]}</span>`:''; }
+  function renderDealInfo(d){
+    const el=$('bDealInfo'); if(!d){ el.innerHTML=''; return; }
+    const btn = d.status==='pending' ? '<button type="button" class="btn small" data-di="cancel">Отозвать заявку</button>'
+      : (d.status==='declined'||d.status==='cancelled') ? '<button type="button" class="btn small" data-di="resend">Отправить снова</button>' : '';
+    el.innerHTML = esc(dealInfoText(d)) + (btn?`<div class="btnrow" style="margin-top:6px">${btn}</div>`:'');
+  }
+  $('bDealInfo').addEventListener('click',async e=>{
+    const el=e.target.closest('[data-di]'); if(!el) return;
+    const b=state.batches.find(x=>x.id===editId); if(!b||!b.deal) return;
+    try{
+      if(el.dataset.di==='cancel'){ await window.Deals.ensureAuth(Auth.google.email); await window.Deals.respond(b.deal.id,'cancelled'); b.deal.status='cancelled'; changed(); renderDealInfo(b.deal); toast('Заявка отозвана.'); refreshDeals(); }
+      else if(el.dataset.di==='resend'){ b.deal.fp=''; await maybeSendDeal(b,b.deal.toEmail); renderDealInfo(b.deal); }
+    }catch(er){ toast((er&&er.message)||'Не удалось выполнить действие. Проверьте интернет.'); }
+  });
   function dealInfoText(d){ return `Заявка поставщику ${d.toEmail}: ${DEAL_ST[d.status]||d.status}.`; }
   const dealFp = (b,email) => [b.name,b.kg,b.price,b.supDue,b.boxKg||'',email].join('|');
   async function maybeSendDeal(b,email){
@@ -804,8 +818,8 @@
     const d=[...dealsCache.incoming,...dealsCache.outgoing].find(x=>x.id===el.dataset.id); if(!d) return;
     const act=el.dataset.deal;
     try{
-      if(act==='decline'){ await window.Deals.respond(d.id,'declined'); toast('Заявка отклонена.'); await refreshDeals(); }
-      else if(act==='cancel'){ await window.Deals.respond(d.id,'cancelled'); toast('Заявка отозвана.'); await refreshDeals(); }
+      if(act==='decline'){ if(!confirm('Отклонить заявку от '+(d.fromName||d.fromEmail)+'?')) return; await window.Deals.respond(d.id,'declined'); toast('Заявка отклонена.'); await refreshDeals(); }
+      else if(act==='cancel'){ await window.Deals.ensureAuth(Auth.google.email); await window.Deals.respond(d.id,'cancelled'); toast('Заявка отозвана.'); await refreshDeals(); }
       else if(act==='accept'){
         const ex=saleOfDeal(d);
         if(ex){
