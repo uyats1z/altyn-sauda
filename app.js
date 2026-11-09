@@ -137,6 +137,7 @@
             <div>Себестоимость<b>${money(c.cpk)}/кг</b>${b.boxKg?`<span class="subfx" style="color:var(--muted)">${money(c.cpk*b.boxKg)} за ящик</span>`:''}</div>
             <div>Выручка<b>${money(c.rev)}</b>${subfx(c.rev)}</div>
           </div>
+          ${b.customs?`<div class="callout">Таможня: <b>${money(b.customs)}</b> (отдельно, в себестоимость и прибыль не входит).</div>`:''}
           ${Array.isArray(b.costs)&&b.costs.length?`<div class="callout">Расходы: ${b.costs.map(x=>`${esc(x.name)} <b>${money(x.amount)}</b>`).join(', ')}. Всего <b>${money(c.extra)}</b>.</div>`:''}
           ${c.breakeven!==null?`<div class="callout">Чтобы выйти в ноль, остаток продавайте не дешевле <b>${money(c.breakeven)}</b> за кг${b.boxKg?` (<b>${money(c.breakeven*b.boxKg)}</b> за ящик)`:''}.</div>`:''}
           <div class="cardbtns">
@@ -629,7 +630,7 @@
     $('bRateWrap').style.display = foreign?'flex':'none'; if(foreign) $('bRateLbl').textContent=`Курс: 1 ${CUR[b.priceCur]} =`; setN('bRate',foreign ? b.rate : '');
     if(b){ setSeg($('bQtyUnit'),'kg'); setN('bQty',b.kg); setSeg($('bPriceUnit'),'kg'); setN('bPrice',foreign?b.priceOrig:b.price); }
     else { setSeg($('bQtyUnit'),'t'); setN('bQty',''); setSeg($('bPriceUnit'),'kg'); setN('bPrice',''); }
-    { const ex=b?extraOf(b):0; const l=b&&Array.isArray(b.costs)?b.costs:(ex?[{name:'Доставка',amount:ex}]:[]); $('bCosts').innerHTML=''; l.forEach(x=>addCostRow(x.name,x.amount)); if(!l.length) addCostRow('',''); }
+    { const ex=b?extraOf(b):0; const l=b&&Array.isArray(b.costs)?b.costs:(ex?[{name:'Доставка',amount:ex}]:[]); $('bCosts').innerHTML=''; l.forEach(x=>addCostRow(x.name,x.amount)); if(!l.length) addCostRow('',''); setN('bCustoms',b&&b.customs?b.customs:''); }
     $('bDate').value=b?b.date:today(); $('bErr').textContent='';
     if(b) linkBatchUnit();
     $('bWasteWrap').hidden=!b; setN('bWaste',b&&b.waste?b.waste:''); $('delBatch').hidden=!b; $('bMore').open=false;
@@ -692,7 +693,7 @@
     const supEmail=supCredit&&!$('dealWrap').hidden ? $('bSupEmail').value.trim().toLowerCase() : '';
     if(supEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supEmail)){$('bErr').textContent='Проверьте email поставщика.'; return;}
     if(supEmail&&Auth.google&&supEmail===String(Auth.google.email||'').toLowerCase()){$('bErr').textContent='Это ваш собственный email. Укажите email поставщика.'; return;}
-    const fields={supplier:supName,supCredit,supDue:supCredit?$('bDue').value:'',name,kg,price,priceCur:bc,priceOrig:bc==='kzt'?null:r2(batchPriceOrig()*10000)/10000,rate:bc==='kzt'?null:batchRate(),boxKg:box||null,costs:readCosts(),delivery:costsSum(readCosts()),other:0,date:$('bDate').value||today()};
+    const fields={supplier:supName,supCredit,supDue:supCredit?$('bDue').value:'',name,kg,price,priceCur:bc,priceOrig:bc==='kzt'?null:r2(batchPriceOrig()*10000)/10000,rate:bc==='kzt'?null:batchRate(),boxKg:box||null,costs:readCosts(),customs:num($('bCustoms').value),delivery:costsSum(readCosts()),other:0,date:$('bDate').value||today()};
     if(editId){
       const b=state.batches.find(x=>x.id===editId); const c=calc(b); const w=num($('bWaste').value);
       if(w<0||kg+1e-9<c.sold+w){$('bErr').textContent=`Уже продано ${kgf(c.sold)}${w?` и списано ${kgf(w)}`:''}, вес партии не может быть меньше.`;return;}

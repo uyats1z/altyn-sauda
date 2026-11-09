@@ -176,12 +176,13 @@
       <div class="rateline" id="bRateWrap"><span id="bRateLbl">Курс:</span> <input id="bRate" type="text" data-num inputmode="decimal" min="0" step="any"> ₸</div>
     </div>
     <div class="field">
-      <div class="cap"><span>Расходы на партию, ₸</span><em id="bCostsTotal"></em></div>
+      <div class="cap"><span>Расходы на партию, ₸ (доставка и др.)</span><em id="bCostsTotal"></em></div>
       <div id="bCosts"></div>
       <button type="button" class="btn small" id="bAddCost">+ Расход (доставка, таможня…)</button>
-      <datalist id="costNames"><option value="Доставка"><option value="Таможня"><option value="Погрузка / разгрузка"><option value="Склад"><option value="Прочее"></datalist>
+      <datalist id="costNames"><option value="Доставка"><option value="Погрузка / разгрузка"><option value="Склад"><option value="Прочее"></datalist>
     </div>
     <div class="field" hidden><div class="cap">Как брали у поставщика</div><div class="seg wide" id="bSupPay"><button data-v="paid">Оплатил сразу</button><button data-v="credit">Под реализацию</button></div></div>
+    <label>Таможня, ₸ (отдельно, в себестоимость и прибыль не входит)<input id="bCustoms" type="text" data-num inputmode="decimal" min="0" step="any" placeholder="0"></label>
     <div class="supbox" id="supBox">
       <label>Поставщик (у кого брали)<input id="bSup" list="supList" placeholder="Имя поставщика" autocomplete="off"></label>
       <datalist id="supList"></datalist>
