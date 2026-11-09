@@ -74,7 +74,7 @@
     if(!Array.isArray(state.expenses)) state.expenses=[];
     if(!state.people||typeof state.people!=='object') state.people={};
     state.batches.forEach(b=>{ if(!Array.isArray(b.supPaid)) b.supPaid=[]; });
-    state.batches.forEach(b=>{ b.sales=b.sales||[]; b.sales.forEach(s=>{ if(s.debtor&&!s.buyer) s.buyer=s.debtor; delete s.debtor; s.repaid=s.repaid||[]; }); });
+    state.batches.forEach(b=>{ b.sales=b.sales||[]; b.sales.forEach(s=>{ if(s.debtor&&!s.buyer) s.buyer=s.debtor; delete s.debtor; if(!s.buyer&&s.city) s.buyer='Покупатель из '+s.city.trim(); s.repaid=s.repaid||[]; }); });
   }
   const repaidSum = s => (s.repaid||[]).reduce((t,r)=>t+r.amount,0);
   const owed = s => s.pay==='debt' ? Math.max(0, r2(s.kg*s.price - repaidSum(s))) : 0;
@@ -186,6 +186,7 @@
     return html;
   }
 
+  const KZ_CITIES=['Алматы','Астана','Шымкент','Актау','Актобе','Атырау','Караганда','Костанай','Кокшетау','Конаев','Кызылорда','Орал','Павлодар','Петропавловск','Семей','Талдыкорган','Тараз','Туркестан','Усть-Каменогорск','Уральск','Экибастуз','Рудный','Темиртау','Жезказган','Балхаш','Сатпаев','Степногорск','Щучинск','Аркалык','Лисаковск','Хромтау','Жанаозен','Аксу','Аральск','Арыс','Атбасар','Ерейментау','Жаркент','Житикара','Зайсан','Кентау','Капшагай','Курчатов','Кульсары','Риддер','Приозёрск','Сарань','Сарыагаш','Серебрянск','Тобыл','Текели','Шар','Шардара','Шу','Шахтинск','Алтай','Абай','Байконыр','Ушарал','Казалинск','Каражал','Каскелен','Есик','Талгар','Макинск','Акколь','Державинск','Есиль','Каратау','Жетысай','Ленгер','Сарканд','Уштобе','Кандыагаш','Эмба','Форт-Шевченко','Мамлютка','Булаево','Тайынша','Жосалы','Аягоз'];
   function buyerGroups(){
     const g={};
     allSales().forEach(({s,b})=>{
@@ -583,7 +584,7 @@
     $('saleChips').innerHTML=avail.map(b=>`<button class="chip" data-b="${b.id}" aria-pressed="${b.id===saleBatch}"><b>${esc(b.name)}</b><span>осталось ${qtyf(calc(b).left,b.boxKg)}</span></button>`).join('');
     const sales=allSales();
     $('buyerList').innerHTML=[...new Set(sales.map(x=>x.s.buyer).filter(Boolean).map(s=>s.trim()))].map(n=>`<option value="${esc(n)}">`).join('');
-    $('cityList').innerHTML=[...new Set(['Алматы','Астана','Актау','Шымкент','Караганда','Атырау'].concat(sales.map(x=>x.s.city).filter(Boolean).map(s=>s.trim())))].map(n=>`<option value="${esc(n)}">`).join('');
+    $('cityList').innerHTML=[...new Set(KZ_CITIES.concat(sales.map(x=>x.s.city).filter(Boolean).map(s=>s.trim())))].map(n=>`<option value="${esc(n)}">`).join('');
     $('sBuyer').value=''; $('sCity').value=''; setN('sQty',''); setN('sShip',''); $('sDate').value=today(); $('sErr').textContent='';
     if(payMode==='debt') payMode='kaspi'; setSeg($('sPay'),payMode); $('sDueWrap').hidden=true;
     { const d=new Date(today()+'T00:00'); d.setDate(d.getDate()+14); $('sDue').value=iso(d); }
@@ -612,7 +613,7 @@
     $('pSum').textContent=money(kg*pk); $('pMargin').textContent=signed(m); $('pMargin').className=m>=0?'pos':'neg';
   }
   $('saveSale').addEventListener('click',()=>{
-    const b=curBatch(); const kg=r2(saleKg()), pk=salePriceKg(), buyer=$('sBuyer').value.trim(), city=$('sCity').value.trim();
+    const b=curBatch(); const kg=r2(saleKg()), pk=salePriceKg(), city=$('sCity').value.trim(), buyer=$('sBuyer').value.trim()||(city?'Покупатель из '+city:'');
     if(!b){$('sErr').textContent='Выберите партию.';return;}
     if(segVal($('sCur'))!=='kzt'&&!(saleRate()>0)){$('sErr').textContent='Укажите курс валюты.';return;}
     if(kg<=0||pk<=0){$('sErr').textContent='Укажите количество и цену.';return;}
