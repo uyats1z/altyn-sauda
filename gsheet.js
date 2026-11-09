@@ -53,7 +53,7 @@
   }
 
   /* ===== шаблон таблицы: заголовки, формулы, оформление ===== */
-  const TPL='6';
+  const TPL='7';
   const GREEN={red:0.18,green:0.451,blue:0.2745}, WHITE={red:1,green:1,blue:1}, BLUE={blue:1}, GRAY={red:0.365,green:0.42,blue:0.376};
   const M='#,##0 "₸"', MD='#,##0 "₸";-#,##0 "₸";"-"', DT='dd.mm.yyyy', USD='"$"#,##0;-"$"#,##0', EUR='"€"#,##0;-"€"#,##0';
   const H={
@@ -108,16 +108,16 @@
     Object.keys(H).forEach(n=>data.push({range:`'${n}'!A1:${colL(H[n].length-1)}1`,values:[H[n]]}));
     Object.keys(FORM).forEach(n=>Object.keys(FORM[n]).forEach(c=>data.push({range:`'${n}'!${c}2`,values:[[FORM[n][c]]]})));
     data.push({range:"'Итоги'!A1:H15",values:ITOGI});
-    { const P="'Партии'!", per=(r)=>`;${P}$B$2:$B;">="&$M${r};${P}$B$2:$B;"<="&TODAY())`;
-      const row=(r,label,from)=>[label,from,`=COUNTIFS(${P}$B$2:$B;">="&$M${r};${P}$B$2:$B;"<="&TODAY())`,`=SUMIFS(${P}$D$2:$D${per(r)}`,
-        `=IFERROR(SUM(ARRAYFORMULA(IF((${P}$B$2:$B>=$M${r})*(${P}$B$2:$B<=TODAY())*(${P}$I$2:$I>0);${P}$D$2:$D/${P}$I$2:$I;0)));0)`,`=SUMIFS(${P}$M$2:$M${per(r)}`];
+    { const P="'Партии'!", per=(r)=>`;${P}$B$2:$B;">="&$M${r})`;
+      const row=(r,label,from)=>[label,from,`=COUNTIFS(${P}$B$2:$B;">="&$M${r})`,`=SUMIFS(${P}$D$2:$D${per(r)}`,
+        `=IFERROR(SUM(ARRAYFORMULA(IF((${P}$B$2:$B>=$M${r})*(${P}$I$2:$I>0);${P}$D$2:$D/${P}$I$2:$I;0)));0)`,`=SUMIFS(${P}$M$2:$M${per(r)}`];
       data.push({range:"'Итоги'!L3:Q7",values:[['Партии за период','С даты','Партий','Кг','Ящиков','Вложено, ₸'],
         row(4,'Сегодня','=TODAY()'),row(5,'Эта неделя (7 дней)','=TODAY()-6'),row(6,'Этот месяц','=DATE(YEAR(TODAY());MONTH(TODAY());1)'),
         ['Считается по дате партии на листе «Партии».','','','','','']]}); }
     data.push({range:"'Итоги'!I3:I6",values:[['Курс валют'],['1 $, ₸'],['1 €, ₸'],['Обновлён']]});
     await api(`${B}/${id}/values:batchClear`,{method:'POST',body:JSON.stringify({ranges:["'Итоги'!A1:H1000"]})});
     await api(`${B}/${id}/values:batchUpdate`,{method:'POST',body:JSON.stringify({valueInputOption:'USER_ENTERED',data})});
-    const rq=[{repeatCell:{range:{sheetId:sid_['Итоги'],startRowIndex:0,endRowIndex:1000,startColumnIndex:0,endColumnIndex:8},cell:{},fields:'userEnteredFormat'}}]; const R=(s,r0,r1,c0,c1,cell,fields)=>rq.push({repeatCell:{range:{sheetId:sid_[s],startRowIndex:r0,endRowIndex:r1,startColumnIndex:c0,endColumnIndex:c1},cell:{userEnteredFormat:cell},fields:'userEnteredFormat('+fields+')'}});
+    const rq=[{updateSpreadsheetProperties:{properties:{timeZone:'Asia/Almaty'},fields:'timeZone'}},{repeatCell:{range:{sheetId:sid_['Итоги'],startRowIndex:0,endRowIndex:1000,startColumnIndex:0,endColumnIndex:8},cell:{},fields:'userEnteredFormat'}}]; const R=(s,r0,r1,c0,c1,cell,fields)=>rq.push({repeatCell:{range:{sheetId:sid_[s],startRowIndex:r0,endRowIndex:r1,startColumnIndex:c0,endColumnIndex:c1},cell:{userEnteredFormat:cell},fields:'userEnteredFormat('+fields+')'}});
     const HD={backgroundColor:GREEN,textFormat:{bold:true,foregroundColor:WHITE},verticalAlignment:'MIDDLE',wrapStrategy:'WRAP'};
     Object.keys(COLS).forEach(n=>{
       R(n,0,1,0,COLS[n].length,HD,'backgroundColor,textFormat,verticalAlignment,wrapStrategy');
