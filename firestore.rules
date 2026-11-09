@@ -2,29 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /deals/{id} {
-      // Заявку видят только отправитель и получатель (по email Google-аккаунта).
-      allow read: if request.auth != null && (
-        resource.data.fromUid == request.auth.uid ||
-        resource.data.toEmail == request.auth.token.email.lower());
-
-      // Создать может только вошедший пользователь, от своего имени, сразу в статусе «ожидает».
-      allow create: if request.auth != null
-        && request.auth.token.email_verified == true
-        && request.resource.data.fromUid == request.auth.uid
-        && request.resource.data.fromEmail == request.auth.token.email.lower()
-        && request.resource.data.status == 'pending'
-        && request.resource.data.toEmail is string
-        && request.resource.data.toEmail.size() < 200
-        && request.resource.data.kg is number && request.resource.data.price is number;
-
-      // Менять можно только статус ожидающей заявки: получатель принимает/отклоняет, отправитель отзывает.
-      allow update: if request.auth != null
-        && resource.data.status == 'pending'
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','respondedAt'])
-        && (
-          (resource.data.toEmail == request.auth.token.email.lower() && request.resource.data.status in ['accepted','declined'])
-          || (resource.data.fromUid == request.auth.uid && request.resource.data.status == 'cancelled'));
-
+      allow read: if request.auth != null && (resource.data.fromUid == request.auth.uid || resource.data.toEmail == request.auth.token.email.lower());
+      allow create: if request.auth != null && request.auth.token.email_verified == true && request.resource.data.fromUid == request.auth.uid && request.resource.data.fromEmail == request.auth.token.email.lower() && request.resource.data.status == 'pending' && request.resource.data.toEmail is string && request.resource.data.toEmail.size() < 200 && (request.resource.data.kg is int || request.resource.data.kg is float) && (request.resource.data.price is int || request.resource.data.price is float);
+      allow update: if request.auth != null && resource.data.status == 'pending' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','respondedAt']) && ((resource.data.toEmail == request.auth.token.email.lower() && request.resource.data.status in ['accepted','declined']) || (resource.data.fromUid == request.auth.uid && request.resource.data.status == 'cancelled'));
       allow delete: if false;
     }
   }

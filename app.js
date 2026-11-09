@@ -588,7 +588,7 @@
     const boxes = b.boxKg ? r2(kg/b.boxKg) : null;
     const sc=segVal($('sCur'));
     b.sales.push({id:uid(),kg,price:pk,priceCur:sc,priceOrig:sc==='kzt'?null:r2(salePriceOrig()*10000)/10000,rate:sc==='kzt'?null:saleRate(),priceUnit:segVal($('sPriceUnit')),boxes,date:$('sDate').value||today(),t:Date.now(),pay:payMode,due:payMode==='debt'?$('sDue').value:'',buyer,city,ship:num($('sShip').value),repaid:[]});
-    if(pendingDeal){ const ns=b.sales[b.sales.length-1]; ns.dealId=pendingDeal.id; const did=pendingDeal.id; pendingDeal=null;
+    if(pendingDeal){ const ns=b.sales[b.sales.length-1]; ns.dealId=pendingDeal.id; ns.dealRoot=pendingDeal.root||pendingDeal.id; const did=pendingDeal.id; pendingDeal=null;
       window.Deals.respond(did,'accepted').then(()=>{ toast('Заявка принята, запись добавлена.'); refreshDeals(); }).catch(()=>toast('Продажа записана, но заявка не отметилась принятой. Откройте «Заявки» и повторите.')); }
     $('saleDlg').close(); changed();
   });
@@ -758,16 +758,17 @@
     if(!b||!window.Deals||!Auth.google) return;
     const fp=dealFp(b,email), old=b.deal;
     if(old&&old.fp===fp) return;
-    if(old&&old.status==='accepted') return;
+    const root=old?(old.root||old.id):null;
     try{
       if(old&&old.status==='pending'){ try{ await window.Deals.respond(old.id,'cancelled'); }catch(e){} }
-      const id=await window.Deals.send({fromEmail:Auth.google.email,fromName:Auth.google.name||Auth.google.email,toEmail:email,toName:b.supplier,fruit:b.name,kg:b.kg,boxKg:b.boxKg,price:b.price,due:b.supDue,date:b.date});
-      b.deal={id,status:'pending',toEmail:email,fp}; changed();
-      toast('Заявка отправлена поставщику. Он увидит её в приложении.');
+      const id=await window.Deals.send({fromEmail:Auth.google.email,fromName:Auth.google.name||Auth.google.email,toEmail:email,toName:b.supplier,fruit:b.name,kg:b.kg,boxKg:b.boxKg,price:b.price,due:b.supDue,date:b.date,root});
+      b.deal={id,status:'pending',toEmail:email,fp,root:root||id}; changed();
+      toast(root?'Изменение отправлено поставщику. Пока он не согласился, действуют прежние условия.':'Заявка отправлена поставщику. Он увидит её в приложении.');
       refreshDeals();
     }catch(e){ toast((e&&e.message)||'Не удалось отправить заявку.'); }
   }
   let dealsCache={incoming:[],outgoing:[]};
+  const saleOfDeal = d => { const r=d.root||d.id; return allSales().find(x=>x.s.dealRoot===r); };
   async function refreshDeals(){
     if(!window.Deals||!Auth.google||!window.Deals.user()){ renderDealBar(); return; }
     try{
@@ -786,8 +787,8 @@
     const inc=dealsCache.incoming, out=dealsCache.outgoing.slice().sort((a,b)=>((b.createdAt&&b.createdAt.seconds)||0)-((a.createdAt&&a.createdAt.seconds)||0));
     const qty=d=>qtyf(d.kg,d.boxKg||null);
     let h=`<div class="dealsec">Входящие</div>`;
-    h+=inc.length?inc.map(d=>`<div class="dealcard"><div><b>${esc(d.fromName||d.fromEmail)}</b> (${esc(d.fromEmail)}) берёт у вас под реализацию:<br><b>${esc(d.fruit)}</b>, ${qty(d)} по ${money(d.price)}/кг, на ${money(d.kg*d.price)}${d.due?`, оплатить до ${dshort(d.due)}`:''}</div>
-      <div class="btnrow"><button class="btn small primary" data-deal="accept" data-id="${esc(d.id)}">Принять</button><button class="btn small" data-deal="decline" data-id="${esc(d.id)}">Отклонить</button></div></div>`).join(''):'<div class="empty" style="padding:12px">Новых заявок нет.</div>';
+    h+=inc.length?inc.map(d=>{ const ex=saleOfDeal(d); return `<div class="dealcard"><div><b>${esc(d.fromName||d.fromEmail)}</b> (${esc(d.fromEmail)}) ${ex?`меняет условия. Сейчас у вас записано: ${kgf(ex.s.kg)} по ${money(ex.s.price)}/кг. Новые условия:`:'берёт у вас под реализацию:'}<br><b>${esc(d.fruit)}</b>, ${qty(d)} по ${money(d.price)}/кг, на ${money(d.kg*d.price)}${d.due?`, оплатить до ${dshort(d.due)}`:''}</div>
+      <div class="btnrow"><button class="btn small primary" data-deal="accept" data-id="${esc(d.id)}">Принять</button><button class="btn small" data-deal="decline" data-id="${esc(d.id)}">Отклонить</button></div></div>`; }).join(''):'<div class="empty" style="padding:12px">Новых заявок нет.</div>';
     h+=`<div class="dealsec">Мои заявки</div>`;
     h+=out.length?out.map(d=>{ const ph=phoneOf(d.toName||''); const link=`${location.origin}${location.pathname}`;
       const wa=ph?`<a class="btn small wa" target="_blank" rel="noopener" href="${waLink(ph,`Здравствуйте! Взял у вас под реализацию ${d.fruit}, ${qty(d)} по ${money(d.price)}/кг. Подтвердите, пожалуйста, в Altyn Sauda (вход через Google ${d.toEmail}): ${link}`)}">Напомнить в WhatsApp</a>`:'';
@@ -806,6 +807,17 @@
       if(act==='decline'){ await window.Deals.respond(d.id,'declined'); toast('Заявка отклонена.'); await refreshDeals(); }
       else if(act==='cancel'){ await window.Deals.respond(d.id,'cancelled'); toast('Заявка отозвана.'); await refreshDeals(); }
       else if(act==='accept'){
+        const ex=saleOfDeal(d);
+        if(ex){
+          const {s:sl,b:bt}=ex; if(d.kg>calc(bt).left+sl.kg+1e-9){ toast(`В партии «${bt.name}» не хватает товара для нового количества.`); return; }
+          $('dealsDlg').close();
+          ask('Изменить уже записанную продажу?',`Было: ${kgf(sl.kg)} по ${money(sl.price)}/кг. Станет: ${kgf(d.kg)} по ${money(d.price)}/кг.`,async()=>{
+            try{ await window.Deals.respond(d.id,'accepted');
+              sl.kg=r2(d.kg); sl.price=d.price; sl.priceCur='kzt'; sl.priceOrig=null; sl.rate=null; sl.boxes=bt.boxKg?r2(sl.kg/bt.boxKg):null; if(d.due) sl.due=d.due;
+              changed(); toast('Условия обновлены в вашей записи.'); refreshDeals();
+            }catch(er){ toast('Не удалось принять изменение. Проверьте интернет и повторите.'); } });
+          return;
+        }
         const avail=state.batches.filter(b=>calc(b).left>0);
         if(!avail.length){ $('dealsDlg').close(); ask('На складе нет товара для записи','Принять заявку без записи в продажи? Продажу можно добавить позже вручную.',async()=>{ try{ await window.Deals.respond(d.id,'accepted'); toast('Заявка принята.'); refreshDeals(); }catch(er){ toast('Не удалось принять заявку.'); } }); return; }
         const fk=key(d.fruit), match=avail.find(b=>key(b.name)===fk)||avail[0];

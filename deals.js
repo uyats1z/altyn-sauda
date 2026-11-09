@@ -40,7 +40,7 @@ window.Deals={
       fromUid:u.uid, fromEmail:low(u.email), fromName:String(d.fromName||'').slice(0,100),
       toEmail:low(d.toEmail), toName:String(d.toName||'').slice(0,100),
       fruit:String(d.fruit||'').slice(0,100), kg:+d.kg, boxKg:d.boxKg?+d.boxKg:null, price:+d.price, due:d.due||'', date:d.date||'',
-      status:'pending', createdAt:serverTimestamp()
+      status:'pending', root:d.root||null, createdAt:serverTimestamp()
     });
     return ref.id;
   },
