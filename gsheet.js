@@ -135,7 +135,7 @@
   }
   async function create(){
     const names=Object.keys(H).concat(['Итоги','_data']);
-    const r=await api(B,{method:'POST',body:JSON.stringify({properties:{title:'Altyn Sauda',locale:'ru_RU',timeZone:'Asia/Almaty'},
+    const r=await api(B,{method:'POST',body:JSON.stringify({properties:{title:'SAM',locale:'ru_RU',timeZone:'Asia/Almaty'},
       sheets:names.map(n=>({properties:Object.assign({title:n,gridProperties:{frozenRowCount:n==='_data'||n==='Итоги'?0:1}},n==='_data'?{hidden:true}:{})}))})});
     await applyTemplate(r.spreadsheetId);
     return r.spreadsheetId;
@@ -145,7 +145,7 @@
     const p=profile(); if(!p) throw err('needs_reauth');
     const k='gs-sheet:'+p.sub; sid=localStorage.getItem(k);
     if(!sid){
-      const q=enc("name='Altyn Sauda' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false");
+      const q=enc("(name='SAM' or name='Altyn Sauda') and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false");
       const r=await api('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)&orderBy=createdTime');
       sid=r.files&&r.files[0]&&r.files[0].id;
     }

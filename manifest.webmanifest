@@ -1,6 +1,6 @@
 {
-  "name": "Altyn Sauda",
-  "short_name": "Altyn Sauda",
+  "name": "SAM",
+  "short_name": "SAM",
   "description": "Учёт партий фруктов",
   "start_url": "./",
   "scope": "./",

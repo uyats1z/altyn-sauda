@@ -1,4 +1,4 @@
-# Altyn Sauda
+# SAM
 
 Открыть `index.html` в браузере (или `python3 -m http.server`).
 

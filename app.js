@@ -262,7 +262,7 @@
   function debtText(p){
     const lines=p.items.filter(x=>owed(x.s)>0).map(({s,b})=>{ const paid=repaidSum(s);
       return `• ${b.name} от ${dshort(s.date)}: взяли ${qtyf(s.kg,b.boxKg)} по ${salePriceTxt(s,b)}, на ${money(s.kg*s.price)}${paid?`, оплачено ${money(paid)}`:''}. Осталось ${money(owed(s))}${s.due?`, оплатить до ${dshort(s.due)}`:''}.`; });
-    return `Здравствуйте, ${p.name}! Напоминаем об оплате товара, взятого под реализацию, всего ${money(p.owed)}:\n${lines.join('\n')}\nAltyn Sauda`;
+    return `Здравствуйте, ${p.name}! Напоминаем об оплате товара, взятого под реализацию, всего ${money(p.owed)}:\n${lines.join('\n')}\nSAM`;
   }
   let phoneKey=null;
   function openPhone(name,kind){
@@ -368,6 +368,22 @@
   /* invoice */
   let invDownloads=null; if(window.claude&&window.claude.use) claude.use('downloads').then(d=>{ invDownloads=d; }).catch(()=>{});
   let invBlob=null, invName='';
+  /* one-page PDF with the receipt picture (JPEG), page size cw x ch pt */
+  function pdfFromJpeg(jpg,pw,ph,cw,ch){
+    const enc=new TextEncoder(), parts=[], offs=[]; let len=0;
+    const put=x=>{ const u=typeof x==='string'?enc.encode(x):x; parts.push(u); len+=u.length; };
+    const obj=(n,body)=>{ offs[n]=len; put(`${n} 0 obj\n`); put(body); put('\nendobj\n'); };
+    put('%PDF-1.4\n');
+    obj(1,'<< /Type /Catalog /Pages 2 0 R >>');
+    obj(2,'<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    obj(3,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${cw} ${ch}] /Resources << /XObject << /Im0 5 0 R >> >> /Contents 4 0 R >>`);
+    const cs=`q ${cw} 0 0 ${ch} 0 0 cm /Im0 Do Q`;
+    obj(4,`<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`);
+    offs[5]=len; put(`5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${pw} /Height ${ph} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`); put(jpg); put('\nendstream\nendobj\n');
+    const xr=len; put('xref\n0 6\n0000000000 65535 f \n'); for(let i=1;i<=5;i++) put(String(offs[i]).padStart(10,'0')+' 00000 n \n');
+    put(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xr}\n%%EOF`);
+    return new Blob(parts,{type:'application/pdf'});
+  }
   function openInvoice(sid){
     const hit=allSales().find(x=>x.s.id===sid); if(!hit) return; const {s,b}=hit;
     const sum=s.kg*s.price, o=owed(s), box=b.boxKg;
@@ -390,7 +406,7 @@
     function left(t,font,color,lh){ t=tr(t); g.font=font; g.fillStyle=color; wrap(t,font,X1-X0).forEach(l=>{ g.fillText(l,X0,y); y+=lh; }); }
     function dash(){ y+=4; g.strokeStyle='#CFCAC2'; g.lineWidth=1; g.setLineDash([5,4]); g.beginPath(); g.moveTo(X0,y); g.lineTo(X1,y); g.stroke(); g.setLineDash([]); y+=22; }
     y+=16;
-    center('Altyn Sauda',F(800,24),ink,26);
+    center('SAM',F(800,24),ink,26);
     center('НАКЛАДНАЯ',F(600,13),mut,18);
     const num='№ '+String(s.id).slice(-6).toUpperCase();
     const dt=dlong(s.date);
@@ -436,10 +452,11 @@
     o2.closePath(); o2.fillStyle='#fff'; o2.fill(); o2.restore();
     o2.save(); o2.clip(); o2.drawImage(tmp,0,0,(RW+M*2)*S,H*S,0,0,RW+M*2,H); o2.restore();
     $('invImg').src=cv.toDataURL('image/png');
-    invBlob=null; invName=`nakladnaya-${s.date}-${(s.buyer||'pokupatel').replace(/[^\wа-яё]+/gi,'_')}.png`;
-    cv.toBlob(bl=>{ invBlob=bl; },'image/png');
+    invBlob=null; invName=`chek-${s.date}-${(s.buyer||'pokupatel').replace(/[^\wа-яё]+/gi,'_')}.pdf`;
+    const cw=RW+M*2, ch=H;
+    cv.toBlob(async bl=>{ try{ invBlob=pdfFromJpeg(new Uint8Array(await bl.arrayBuffer()),cv.width,cv.height,cw,ch); }catch(e){ invBlob=null; } },'image/jpeg',0.92);
     const paidNow=repaidSum(s);
-    const tl=['Altyn Sauda · Накладная '+num, dt, '———————', 'Покупатель: '+[s.buyer||'—',s.city].filter(Boolean).join(', '), '', b.name, `${qShort} × ${pShort} = ${money(sum)}`];
+    const tl=['SAM · Накладная '+num, dt, '———————', 'Покупатель: '+[s.buyer||'—',s.city].filter(Boolean).join(', '), '', b.name, `${qShort} × ${pShort} = ${money(sum)}`];
     if(box) tl.push(`(${kgf(s.kg)}, ${money(s.price)} за кг)`);
     tl.push('———————', 'ИТОГО: '+money(sum));
     if(s.pay==='debt'){ tl.push('Оплата: под реализацию'); if(paidNow) tl.push('Оплачено: '+money(paidNow)); tl.push('Осталось оплатить: '+money(o)); if(s.due&&o>0) tl.push('Оплатить до: '+dshort(s.due)); }
@@ -450,10 +467,18 @@
     $('invSave').hidden=!invDownloads; $('invErr').textContent='';
     $('invDlg').showModal();
   }
+  $('invShare').addEventListener('click',async()=>{
+    if(!invBlob){ $('invErr').textContent='Чек ещё готовится, нажмите через секунду.'; return; }
+    const f=new File([invBlob],invName,{type:'application/pdf'});
+    try{
+      if(navigator.canShare&&navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:'Чек SAM'}); return; }
+    }catch(e){ if(e&&e.name==='AbortError') return; }
+    const u=URL.createObjectURL(invBlob), l=document.createElement('a'); l.href=u; l.download=invName; document.body.appendChild(l); l.click(); l.remove(); setTimeout(()=>URL.revokeObjectURL(u),30000);
+  });
   $('invSave').addEventListener('click',async()=>{
     if(!invDownloads||!invBlob) return;
     try{ await invDownloads.save({filename:invName,data:invBlob}); }
-    catch(e){ if(e&&e.code==='declined') return; $('invErr').textContent='Не получилось сохранить картинку здесь. Можно отправить накладную в WhatsApp текстом.'; if(e&&(e.code==='unavailable'||e.code==='not_granted')) $('invSave').hidden=true; }
+    catch(e){ if(e&&e.code==='declined') return; $('invErr').textContent='Не получилось сохранить PDF здесь. Нажмите «Отправить чек PDF» или отправьте текстом в WhatsApp.'; if(e&&(e.code==='unavailable'||e.code==='not_granted')) $('invSave').hidden=true; }
   });
 
   const reduceMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -825,7 +850,7 @@
       <div class="btnrow"><button class="btn small primary" data-deal="accept" data-id="${esc(d.id)}">Принять</button><button class="btn small" data-deal="decline" data-id="${esc(d.id)}">Отклонить</button></div></div>`; }).join(''):'<div class="empty" style="padding:12px">Новых заявок нет.</div>';
     h+=`<div class="dealsec">Мои заявки</div>`;
     h+=out.length?out.map(d=>{ const ph=phoneOf(d.toName||''); const link=`${location.origin}${location.pathname}`;
-      const wa=ph?`<a class="btn small wa" target="_blank" rel="noopener" href="${waLink(ph,`Здравствуйте! Взял у вас под реализацию ${d.fruit}, ${qty(d)} по ${money(d.price)}/кг. Подтвердите, пожалуйста, в Altyn Sauda (вход через Google ${d.toEmail}): ${link}`)}">Напомнить в WhatsApp</a>`:'';
+      const wa=ph?`<a class="btn small wa" target="_blank" rel="noopener" href="${waLink(ph,`Здравствуйте! Взял у вас под реализацию ${d.fruit}, ${qty(d)} по ${money(d.price)}/кг. Подтвердите, пожалуйста, в SAM (вход через Google ${d.toEmail}): ${link}`)}">Напомнить в WhatsApp</a>`:'';
       return `<div class="dealcard"><div><b>${esc(d.toName||d.toEmail)}</b> (${esc(d.toEmail)}): ${esc(d.fruit)}, ${qty(d)} по ${money(d.price)}/кг ${dealTag(d)}</div>${d.status==='pending'?`<div class="btnrow"><button class="btn small" data-deal="cancel" data-id="${esc(d.id)}">Отозвать</button>${wa}</div>`:''}</div>`; }).join(''):'<div class="empty" style="padding:12px">Вы пока не отправляли заявок. Они создаются, когда вы берёте товар под реализацию и указываете email поставщика.</div>';
     $('dealsBody').innerHTML=h;
   }
