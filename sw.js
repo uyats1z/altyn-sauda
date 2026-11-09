@@ -1,4 +1,4 @@
-const V='altyn-v22';
+const V='altyn-v23';
 const FILES=['./','index.html','style.css','auth.js','app-config.js','gsheet.js','deals.js','app.js','manifest.webmanifest','sam-icon-192.png','sam-icon-512.png'];
 self.addEventListener('install',e=>{ e.waitUntil(caches.open(V).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())); });
 self.addEventListener('activate',e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
