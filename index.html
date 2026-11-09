@@ -182,7 +182,11 @@
       <datalist id="costNames"><option value="Доставка"><option value="Погрузка / разгрузка"><option value="Склад"><option value="Прочее"></datalist>
     </div>
     <div class="field" hidden><div class="cap">Как брали у поставщика</div><div class="seg wide" id="bSupPay"><button data-v="paid">Оплатил сразу</button><button data-v="credit">Под реализацию</button></div></div>
-    <label>Таможня, ₸ (отдельно, в себестоимость и прибыль не входит)<input id="bCustoms" type="text" data-num inputmode="decimal" min="0" step="any" placeholder="0"></label>
+    <div class="field">
+      <div class="cap"><span>Таможня (отдельно, в себестоимость и прибыль не входит)</span><em id="bCustomsHint"></em></div>
+      <div class="qty"><input class="huge" id="bCustoms" type="text" data-num inputmode="decimal" min="0" step="any" placeholder="0"><div class="seg cur" id="bCustomsCur"><button data-v="kzt">₸</button><button data-v="usd">$</button><button data-v="eur">€</button></div></div>
+      <div class="rateline" id="bCustomsRateWrap" style="display:none"><span id="bCustomsRateLbl">Курс:</span> <input id="bCustomsRate" type="text" data-num inputmode="decimal" min="0" step="any"> ₸</div>
+    </div>
     <div class="supbox" id="supBox">
       <label>Поставщик (у кого брали)<input id="bSup" list="supList" placeholder="Имя поставщика" autocomplete="off"></label>
       <datalist id="supList"></datalist>

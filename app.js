@@ -137,7 +137,7 @@
             <div>Себестоимость<b>${money(c.cpk)}/кг</b>${b.boxKg?`<span class="subfx" style="color:var(--muted)">${money(c.cpk*b.boxKg)} за ящик</span>`:''}</div>
             <div>Выручка<b>${money(c.rev)}</b>${subfx(c.rev)}</div>
           </div>
-          ${b.customs?`<div class="callout">Таможня: <b>${money(b.customs)}</b> (отдельно, в себестоимость и прибыль не входит).</div>`:''}
+          ${b.customs?`<div class="callout">Таможня: ${b.customsCur&&b.customsCur!=='kzt'?`<b>${CUR[b.customsCur]}${nf(b.customsOrig)}</b> по курсу ${nf(b.customsRate)} = `:''}<b>${money(b.customs)}</b> (отдельно, в себестоимость и прибыль не входит).</div>`:''}
           ${Array.isArray(b.costs)&&b.costs.length?`<div class="callout">Расходы: ${b.costs.map(x=>`${esc(x.name)} <b>${money(x.amount)}</b>`).join(', ')}. Всего <b>${money(c.extra)}</b>.</div>`:''}
           ${c.breakeven!==null?`<div class="callout">Чтобы выйти в ноль, остаток продавайте не дешевле <b>${money(c.breakeven)}</b> за кг${b.boxKg?` (<b>${money(c.breakeven*b.boxKg)}</b> за ящик)`:''}.</div>`:''}
           <div class="cardbtns">
@@ -630,7 +630,7 @@
     $('bRateWrap').style.display = foreign?'flex':'none'; if(foreign) $('bRateLbl').textContent=`Курс: 1 ${CUR[b.priceCur]} =`; setN('bRate',foreign ? b.rate : '');
     if(b){ setSeg($('bQtyUnit'),'kg'); setN('bQty',b.kg); setSeg($('bPriceUnit'),'kg'); setN('bPrice',foreign?b.priceOrig:b.price); }
     else { setSeg($('bQtyUnit'),'t'); setN('bQty',''); setSeg($('bPriceUnit'),'kg'); setN('bPrice',''); }
-    { const ex=b?extraOf(b):0; const l=b&&Array.isArray(b.costs)?b.costs:(ex?[{name:'Доставка',amount:ex}]:[]); $('bCosts').innerHTML=''; l.forEach(x=>addCostRow(x.name,x.amount)); if(!l.length) addCostRow('',''); setN('bCustoms',b&&b.customs?b.customs:''); }
+    { const ex=b?extraOf(b):0; const l=b&&Array.isArray(b.costs)?b.costs:(ex?[{name:'Доставка',amount:ex}]:[]); $('bCosts').innerHTML=''; l.forEach(x=>addCostRow(x.name,x.amount)); if(!l.length) addCostRow('',''); const cc=b&&b.customsCur&&b.customsCur!=='kzt'?b.customsCur:'kzt'; setSeg($('bCustomsCur'),cc); setN('bCustoms',b&&b.customs?(cc==='kzt'?b.customs:b.customsOrig):''); setN('bCustomsRate',cc==='kzt'?'':b.customsRate); customsUi(); }
     $('bDate').value=b?b.date:today(); $('bErr').textContent='';
     if(b) linkBatchUnit();
     $('bWasteWrap').hidden=!b; setN('bWaste',b&&b.waste?b.waste:''); $('delBatch').hidden=!b; $('bMore').open=false;
@@ -644,6 +644,12 @@
     batchPreview(); $('batchDlg').showModal();
   }
   ['bQty','bPrice','bBox'].forEach(i=>$(i).addEventListener('input',batchPreview));
+  const customsCur = () => segVal($('bCustomsCur'));
+  const customsKzt = () => num($('bCustoms').value)*(customsCur()==='kzt'?1:num($('bCustomsRate').value));
+  function customsUi(){ const c=customsCur(); $('bCustomsRateWrap').style.display=c==='kzt'?'none':'flex'; if(c!=='kzt') $('bCustomsRateLbl').textContent=`Курс: 1 ${CUR[c]} =`;
+    $('bCustomsHint').textContent = c!=='kzt'&&num($('bCustoms').value)&&num($('bCustomsRate').value) ? '= '+money(customsKzt()) : ''; }
+  segInit($('bCustomsCur'),v=>{ if(v!=='kzt'&&!num($('bCustomsRate').value)){ const r=(state.rates||{})[v]; if(r>0) setN('bCustomsRate',r); } customsUi(); });
+  ['bCustoms','bCustomsRate'].forEach(i=>$(i).addEventListener('input',customsUi));
   function addCostRow(name,amount){
     const d=document.createElement('div'); d.className='costrow'; d.style.cssText='display:flex;gap:6px;margin-bottom:6px;align-items:center';
     d.innerHTML='<input class="cn" list="costNames" placeholder="Что за расход" autocomplete="off" style="flex:1;min-width:0"><input class="ca" type="text" data-num inputmode="decimal" placeholder="0" style="width:38%"><button type="button" class="iconbtn" aria-label="Убрать расход">✕</button>';
@@ -684,6 +690,7 @@
   $('saveBatch').addEventListener('click',()=>{
     const name=$('bName').value.trim(), kg=r2(batchKg()), price=batchPriceKg(), box=num($('bBox').value);
     if((segVal($('bQtyUnit'))==='box'||segVal($('bPriceUnit'))==='box')&&!box){$('bErr').textContent='Укажите вес одного ящика.';return;}
+    if(customsCur()!=='kzt'&&num($('bCustoms').value)>0&&!(num($('bCustomsRate').value)>0)){$('bErr').textContent='Укажите курс валюты для таможни.';return;}
     if(segVal($('bCur'))!=='kzt'&&!(batchRate()>0)){$('bErr').textContent='Укажите курс валюты.';return;}
     if(!name||kg<=0||price<=0){$('bErr').textContent='Укажите фрукт, количество и цену закупа.';return;}
     const bc=segVal($('bCur'));
@@ -693,7 +700,7 @@
     const supEmail=supCredit&&!$('dealWrap').hidden ? $('bSupEmail').value.trim().toLowerCase() : '';
     if(supEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supEmail)){$('bErr').textContent='Проверьте email поставщика.'; return;}
     if(supEmail&&Auth.google&&supEmail===String(Auth.google.email||'').toLowerCase()){$('bErr').textContent='Это ваш собственный email. Укажите email поставщика.'; return;}
-    const fields={supplier:supName,supCredit,supDue:supCredit?$('bDue').value:'',name,kg,price,priceCur:bc,priceOrig:bc==='kzt'?null:r2(batchPriceOrig()*10000)/10000,rate:bc==='kzt'?null:batchRate(),boxKg:box||null,costs:readCosts(),customs:num($('bCustoms').value),delivery:costsSum(readCosts()),other:0,date:$('bDate').value||today()};
+    const fields={supplier:supName,supCredit,supDue:supCredit?$('bDue').value:'',name,kg,price,priceCur:bc,priceOrig:bc==='kzt'?null:r2(batchPriceOrig()*10000)/10000,rate:bc==='kzt'?null:batchRate(),boxKg:box||null,costs:readCosts(),customs:r2(customsKzt()),customsCur:customsCur(),customsOrig:customsCur()==='kzt'?null:num($('bCustoms').value),customsRate:customsCur()==='kzt'?null:num($('bCustomsRate').value),delivery:costsSum(readCosts()),other:0,date:$('bDate').value||today()};
     if(editId){
       const b=state.batches.find(x=>x.id===editId); const c=calc(b); const w=num($('bWaste').value);
       if(w<0||kg+1e-9<c.sold+w){$('bErr').textContent=`Уже продано ${kgf(c.sold)}${w?` и списано ${kgf(w)}`:''}, вес партии не может быть меньше.`;return;}
