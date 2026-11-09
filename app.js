@@ -413,7 +413,6 @@
     y+=6;
     if(logoImg.complete&&logoImg.naturalWidth){ const LS=72; g.save(); g.beginPath(); g.arc(CX,y+LS/2,LS/2,0,Math.PI*2); g.clip(); g.drawImage(logoImg,CX-LS/2,y,LS,LS); g.restore(); y+=LS+22; } else y+=10;
     center('SAM',F(800,24),ink,26);
-    center('НАКЛАДНАЯ',F(600,13),mut,18);
     const num='№ '+String(s.id).slice(-6).toUpperCase();
     const dt=dlong(s.date);
     center(`${num} · ${dt}`,F(400,13),mut,18);
@@ -462,7 +461,7 @@
     const cw=RW+M*2, ch=H;
     cv.toBlob(async bl=>{ try{ invBlob=pdfFromJpeg(new Uint8Array(await bl.arrayBuffer()),cv.width,cv.height,cw,ch); }catch(e){ invBlob=null; } },'image/jpeg',0.92);
     const paidNow=repaidSum(s);
-    const tl=['SAM · Накладная '+num, dt, '———————', 'Покупатель: '+[s.buyer||'—',s.city].filter(Boolean).join(', '), '', b.name, `${qShort} × ${pShort} = ${money(sum)}`];
+    const tl=['SAM · Чек '+num, dt, '———————', 'Покупатель: '+[s.buyer||'—',s.city].filter(Boolean).join(', '), '', b.name, `${qShort} × ${pShort} = ${money(sum)}`];
     if(box) tl.push(`(${kgf(s.kg)}, ${money(s.price)} за кг)`);
     tl.push('———————', 'ИТОГО: '+money(sum));
     if(s.pay==='debt'){ tl.push('Оплата: под реализацию'); if(paidNow) tl.push('Оплачено: '+money(paidNow)); tl.push('Осталось оплатить: '+money(o)); if(s.due&&o>0) tl.push('Оплатить до: '+dshort(s.due)); }
