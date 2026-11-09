@@ -1059,7 +1059,7 @@
     const b=$('tplNow'); b.disabled=true; const t0=b.textContent; b.textContent='Обновляю…';
     try{ if(!GS.hasToken()) await GS.connect(Auth.google.email); await GS.reapply(); b.textContent='Готово, откройте таблицу'; }
     catch(e){ b.textContent=(e&&e.code!=='needs_reauth'&&e.message)||'Не вышло, нажмите ещё раз'; }
-    setTimeout(()=>{ b.textContent=t0; b.disabled=false; },4000); }); }
+    setTimeout(()=>{ b.textContent=t0; b.disabled=false; },12000); }); }
   /* Google: подтянуть данные из личной таблицы (новее — выигрывает) */
   async function cloudLoad(){
     const snap=await docRef.get(); const d=snap.exists?snap.data():null;
