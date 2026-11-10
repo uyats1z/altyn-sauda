@@ -16,15 +16,24 @@ const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getFirestore(app)
 const low=s=>String(s||'').trim().toLowerCase();
 let settled=false;
 const settle=new Promise(res=>{ onAuthStateChanged(auth,()=>{ settled=true; res(); }); });
+const settleT=()=>Promise.race([settle,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Сервер заявок не отвечает. Проверьте интернет и повторите.')),10000))]);
+const AUTH_MSG={
+  'auth/popup-blocked':'Браузер заблокировал окно входа. Нажмите ещё раз или разрешите всплывающие окна.',
+  'auth/popup-closed-by-user':'Вход отменён.',
+  'auth/cancelled-popup-request':'Вход отменён. Нажмите ещё раз.',
+  'auth/network-request-failed':'Нет связи с сервером входа. Проверьте интернет.',
+  'auth/unauthorized-domain':'Этот адрес сайта не разрешён для входа (auth/unauthorized-domain). Его нужно добавить в Firebase: Authentication, Settings, Authorized domains.',
+  'auth/operation-not-supported-in-this-environment':'В этом браузере вход через окно не поддерживается. Откройте сайт в Safari или Chrome.'
+};
 
 async function ensureAuth(hint){
-  if(!settled) await settle;
+  if(!settled) await settleT();
   let u=auth.currentUser;
   if(u&&hint&&low(u.email)!==low(hint)){ await signOut(auth); u=null; }
   if(!u){
     const p=new GoogleAuthProvider(); if(hint) p.setCustomParameters({login_hint:hint});
     try{ u=(await signInWithPopup(auth,p)).user; }
-    catch(e){ const err=new Error(e&&e.code==='auth/popup-blocked'?'Браузер заблокировал окно входа. Разрешите всплывающие окна и повторите.':e&&e.code==='auth/popup-closed-by-user'?'Вход отменён.':'Не удалось войти: '+((e&&e.code)||'ошибка')); err.code=e&&e.code; throw err; }
+    catch(e){ const err=new Error((e&&AUTH_MSG[e.code])||'Не удалось войти: '+((e&&e.code)||'ошибка')); err.code=e&&e.code; throw err; }
     if(hint&&low(u.email)!==low(hint)){ await signOut(auth); throw new Error('Войдите тем же Google-аккаунтом, что и в приложении ('+hint+').'); }
   }
   return u;
@@ -54,6 +63,12 @@ window.Deals={
     const s=await getDocs(query(col,where('fromUid','==',u.uid)));
     return s.docs.map(pick);
   },
-  respond:(id,status)=>updateDoc(doc(db,'deals',id),{status,respondedAt:serverTimestamp()})
+  async respond(id,status){
+    try{ await updateDoc(doc(db,'deals',id),{status,respondedAt:serverTimestamp()}); }
+    catch(e){
+      if(e&&e.code==='permission-denied'){ const err=new Error('Заявка уже обработана или отозвана. Список обновлён.'); err.code='stale'; throw err; }
+      throw e;
+    }
+  }
 };
 window.dispatchEvent(new Event('deals-ready'));
