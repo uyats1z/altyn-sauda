@@ -72,6 +72,8 @@ button,input,select{font:inherit;color:inherit}
 .inline{display:flex;gap:8px;align-items:end;margin-top:14px}
 .inline label{flex:1}
 .cardbtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.cardbtns.declined{margin:0;padding:0 14px 14px;align-items:center;justify-content:space-between;font-size:.88rem;color:var(--loss)}
+.cardbtns.declined .btn{border-color:var(--loss)}
 
 .sale{display:grid;grid-template-columns:1fr auto auto;gap:2px 10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 6px 10px 12px;margin-bottom:8px}
 .sale .t{font-weight:600}
