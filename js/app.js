@@ -121,10 +121,10 @@
     if(!state.batches.length) return `<div class="empty">Партий пока нет. Нажмите ${document.documentElement.dataset.layout==='mobile'?'«+» → «Новая партия»':'«Новая партия»'}: укажите, сколько заехало и почём.</div>`;
     const list=state.batches.slice().sort((a,b)=>{const la=calc(a).left>0, lb=calc(b).left>0; if(la!==lb) return la?-1:1; return (b.date||'').localeCompare(a.date||'');});
     return list.map(b=>{
-      const c=calc(b), isOpen=!!open[b.id], declined=!!(b.deal&&b.deal.status==='declined');
+      const c=calc(b), declined=!!(b.deal&&b.deal.status==='declined'), isOpen=!declined&&!!open[b.id];
       const sP=b.kg?Math.min(100,c.sold/b.kg*100):0, wP=b.kg?Math.min(100-sP,c.waste/b.kg*100):0;
       return `<article class="card" data-id="${b.id}">
-        <button class="head" data-act="toggle" aria-expanded="${isOpen}">
+        <button class="head" data-act="${declined?'none':'toggle'}"${declined?'':` aria-expanded="${isOpen}"`}>
           <span class="name">${esc(b.name)}</span>
           <span class="right ${c.profit>=0?'pos':'neg'}">${signed(c.profit)}<small>${c.profit>=0?'заработано':'ещё не окупилось'}</small>${subfx(c.profit)}</span>
           <span class="sub">${dshort(b.date)}, ${b.supCredit?`взяли под реализацию у ${esc(b.supplier||'')}: `:''}${qtyf(b.kg,b.boxKg)}, ${b.supCredit?'по':'закуп'} ${b.priceCur&&b.priceCur!=='kzt'?`${curPrice(b.priceOrig,b.priceCur)}/кг по курсу ${nf(b.rate)} = `:''}${money(b.price)}/кг</span>
@@ -918,7 +918,9 @@
     const d=[...dealsCache.incoming,...dealsCache.outgoing].find(x=>x.id===el.dataset.id); if(!d) return;
     const act=el.dataset.deal;
     try{
-      if(act==='decline'){ if(!confirm('Отклонить заявку от '+(d.fromName||d.fromEmail)+'?')) return; await window.Deals.respond(d.id,'declined'); toast('Заявка отклонена.'); await refreshDeals(); }
+      if(act==='decline'){ if(!confirm('Отклонить заявку от '+(d.fromName||d.fromEmail)+'?')) return;
+        dealsCache.incoming=dealsCache.incoming.filter(x=>x.id!==d.id); renderDeals(); renderDealBar(); /* сразу убираем из списка, не ждём сервер */
+        await window.Deals.respond(d.id,'declined'); toast('Заявка отклонена.'); await refreshDeals(); }
       else if(act==='cancel'){ await window.Deals.ensureAuth(Auth.google.email); await window.Deals.respond(d.id,'cancelled'); toast('Заявка отозвана.'); await refreshDeals(); }
       else if(act==='accept'){
         const ex=saleOfDeal(d);
@@ -943,6 +945,7 @@
       }
     }catch(er){ if(er&&er.code==='stale'){ toast(er.message); await refreshDeals(); } else toast('Не удалось выполнить действие. Проверьте интернет и повторите.'); }
   });
+  let dealsT=null; window.addEventListener('deals-changed',()=>{ clearTimeout(dealsT); dealsT=setTimeout(refreshDeals,300); });
   window.addEventListener('deals-ready',()=>{ if(window.Deals) window.Deals.ready().then(refreshDeals); });
   if(window.Deals) window.Deals.ready().then(refreshDeals);
   renderDealBar();

@@ -2,7 +2,7 @@
    Хранятся в Firebase Firestore (общий для пользователей сервер); сами данные учёта остаются в таблице пользователя. */
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import {getFirestore,collection,doc,addDoc,updateDoc,deleteDoc,query,where,getDocs,serverTimestamp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import {getFirestore,collection,doc,addDoc,updateDoc,deleteDoc,query,where,getDocs,onSnapshot,serverTimestamp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const firebaseConfig={
   apiKey:'AIzaSyB5wJnnAGgZNOqT59adf5dhh2CkJjcjVWM',
@@ -15,7 +15,17 @@ const firebaseConfig={
 const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getFirestore(app), col=collection(db,'deals');
 const low=s=>String(s||'').trim().toLowerCase();
 let settled=false;
-const settle=new Promise(res=>{ onAuthStateChanged(auth,()=>{ settled=true; res(); }); });
+/* Живое обновление: как только поставщик ответил (или пришла новая заявка), приложение узнаёт об этом сразу. */
+let unwatch=[];
+function watch(u){
+  unwatch.forEach(f=>{ try{ f(); }catch(e){} }); unwatch=[];
+  if(!u) return;
+  const ping=()=>window.dispatchEvent(new Event('deals-changed'));
+  const opts={includeMetadataChanges:false}, skip={a:true,b:true};
+  unwatch.push(onSnapshot(query(col,where('fromUid','==',u.uid)),opts,()=>{ if(skip.a){ skip.a=false; return; } ping(); },()=>{}));
+  unwatch.push(onSnapshot(query(col,where('toEmail','==',low(u.email)),where('status','==','pending')),opts,()=>{ if(skip.b){ skip.b=false; return; } ping(); },()=>{}));
+}
+const settle=new Promise(res=>{ onAuthStateChanged(auth,u=>{ watch(u); settled=true; res(); }); });
 const settleT=()=>Promise.race([settle,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Сервер заявок не отвечает. Проверьте интернет и повторите.')),10000))]);
 const AUTH_MSG={
   'auth/popup-blocked':'Браузер заблокировал окно входа. Нажмите ещё раз или разрешите всплывающие окна.',
