@@ -44,7 +44,7 @@
     if(u){
       const lbl=$('acctName'); if(lbl) lbl.textContent=u.login;
       const lo=$('logoutBtn'); if(lo) lo.addEventListener('click',()=>{ if(confirm('Выйти из аккаунта?')) Auth.logout(); });
-      const s=document.createElement('script'); s.src='app.js'; document.body.appendChild(s);
+      const s=document.createElement('script'); s.src='js/app.js'; document.body.appendChild(s);
       return;
     }
     let mode='login';
