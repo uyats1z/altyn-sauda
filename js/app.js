@@ -725,7 +725,7 @@
     $('pCost').textContent=money(cost);
     $('pCpk').textContent = kg ? money(cost/kg)+'/кг'+(box?`, ${money(cost/kg*box)}/ящ.`:'') : '—';
   }
-  function supToggle(){ $('supBox').hidden = segVal($('bSupPay'))!=='credit'; supSummary(); }
+  function supToggle(){ const cr=segVal($('bSupPay'))==='credit'; $('supBox').hidden=!cr; $('bCustomsField').hidden = cr && !num($('bCustoms').value); supSummary(); }
   function supSummary(){
     if(segVal($('bSupPay'))!=='credit'){ $('supSum').textContent=''; return; }
     const kg=batchKg(), box=num($('bBox').value), pk=batchPriceKg(), bc=segVal($('bCur'));
