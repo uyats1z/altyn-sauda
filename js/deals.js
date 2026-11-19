@@ -2,7 +2,7 @@
    Хранятся в Firebase Firestore (общий для пользователей сервер); сами данные учёта остаются в таблице пользователя. */
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import {getFirestore,collection,doc,addDoc,updateDoc,query,where,getDocs,serverTimestamp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import {getFirestore,collection,doc,addDoc,updateDoc,deleteDoc,query,where,getDocs,serverTimestamp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const firebaseConfig={
   apiKey:'AIzaSyB5wJnnAGgZNOqT59adf5dhh2CkJjcjVWM',
@@ -63,6 +63,7 @@ window.Deals={
     const s=await getDocs(query(col,where('fromUid','==',u.uid)));
     return s.docs.map(pick);
   },
+  async remove(id){ await deleteDoc(doc(db,'deals',id)); },
   async respond(id,status){
     try{ await updateDoc(doc(db,'deals',id),{status,respondedAt:serverTimestamp()}); }
     catch(e){
